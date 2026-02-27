@@ -1,36 +1,30 @@
 #include "UMassHealthProcessor.h"
 #include "MassExecutionContext.h"
-#include "CS3247_Group2/Mass/Fragments/FEnemyTag.h"
-#include "CS3247_Group2/Mass/Fragments/FHealthFragment.h"
+#include "CS3247_Group2/Mass/Fragments/FEnemyFragments.h"
 
-UMassHealthProcessor::UMassHealthProcessor()
+UMassHealthProcessor::UMassHealthProcessor() : EntityQuery(*this)
 {
-	// Leave this empty or for basic property defaults. 
-	bAutoRegisterWithProcessingPhases = true;
+	
 }
 
 void UMassHealthProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
-	// Set up the Query requirements
-	EntityQuery.AddRequirement<FHealthFragment>(EMassFragmentAccess::ReadWrite);
-	EntityQuery.AddTagRequirement<FEnemyTag>(EMassFragmentPresence::All);
-
-	// Register the query so the processor "owns" it
-	EntityQuery.RegisterWithProcessor(*this);
+	EntityQuery.AddRequirement<FHealthFragment>(EMassFragmentAccess::ReadOnly);
 }
 
 void UMassHealthProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
-	EntityQuery.ForEachEntityChunk(Context, [](FMassExecutionContext& IterContext)
+	EntityQuery.ForEachEntityChunk(Context, [](FMassExecutionContext& Context)
 	{
-		const TArrayView<FHealthFragment> HealthList = IterContext.GetMutableFragmentView<FHealthFragment>();
-        
-		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
+		const TConstArrayView<FHealthFragment> HealthList = Context.GetFragmentView<FHealthFragment>();
+		const int32 NumEntities = Context.GetNumEntities();
+		FMassCommandBuffer& CommandBuffer = Context.Defer();
+		
+		for (int32 i = 0; i < NumEntities; ++i)
 		{
 			if (HealthList[i].CurrentHealth <= 0.0f)
 			{
-				// Deferring the destruction is the correct move!
-				IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));
+				CommandBuffer.DestroyEntity(Context.GetEntity(i));
 			}
 		}
 	});
