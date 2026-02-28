@@ -8,9 +8,22 @@ public class CS3247_Group2 : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			
+			"MassEntity", 
+			"MassCommon", 
+			"MassMovement", 
+			"MassNavigation", 
+			"StateTreeModule",
+			"MassAIBehavior"
+		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "MassEntity", "MassCommon", "MassMovement", "MassNavigation" });
+		PrivateDependencyModuleNames.AddRange(new string[] {});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

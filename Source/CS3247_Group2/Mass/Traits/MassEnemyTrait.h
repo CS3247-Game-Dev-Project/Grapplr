@@ -4,7 +4,7 @@
 #include "MassEnemyTrait.generated.h"
 
 UCLASS()
-class UMassEnemyTrait : public UMassEntityTraitBase
+class CS3247_GROUP2_API UMassEnemyTrait : public UMassEntityTraitBase
 {
 	GENERATED_BODY()
 	
