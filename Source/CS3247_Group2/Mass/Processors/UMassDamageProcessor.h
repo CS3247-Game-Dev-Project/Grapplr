@@ -1,20 +1,18 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "MassProcessor.h"
-#include "UMassHealthProcessor.generated.h"
+#include "UMassDamageProcessor.generated.h"
 
 /**
- * Handles health logic.
+ * Handles health/damage logic.
  */
 UCLASS()
-class CS3247_GROUP2_API UMassHealthProcessor : public UMassProcessor
+class CS3247_GROUP2_API UMassDamageProcessor : public UMassProcessor
 {
 	GENERATED_BODY()
 
 public:
-	UMassHealthProcessor();
+	UMassDamageProcessor();
 	
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;

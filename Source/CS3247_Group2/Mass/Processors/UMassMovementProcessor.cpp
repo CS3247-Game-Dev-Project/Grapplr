@@ -18,6 +18,7 @@ void UMassMovementProcessor::ConfigureQueries(const TSharedRef<FMassEntityManage
 {
 	EntityQuery.Initialize(EntityManager);
 	
+	// TODO: split by ground/air movement tags.
 	EntityQuery.AddRequirement<FMassMoveTargetFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FMassStateTreeInstanceFragment>(EMassFragmentAccess::ReadOnly);
@@ -60,9 +61,12 @@ void UMassMovementProcessor::Execute(FMassEntityManager& EntityManager, FMassExe
 			if (!ExecState || (ExecState->TreeRunStatus != EStateTreeRunStatus::Running)) continue;
 			
 			// TODO: check for a specific state handle? currently just checks if state tree is running.
+			// TODO: State tree needs to check if player is close enough before switching states to attack?
+			// (Should stop moving if close enough and trigger attack) 
 			// if (ExecState->ActiveState == MyChaseStateHandle)
 			
 			// NOTE: navmesh is not used in movement currently, possible that enemies get stuck, although mass avoidance helps.
+			// TODO: Use navmesh navigation?
 			FMassMoveTargetFragment& MoveTarget = MoveTargets[i];
 			const FTransform& EntityTransform = Transforms[i].GetTransform();
 			

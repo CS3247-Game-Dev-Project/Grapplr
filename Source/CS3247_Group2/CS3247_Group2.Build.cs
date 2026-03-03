@@ -20,10 +20,9 @@ public class CS3247_Group2 : ModuleRules
 			"MassMovement", 
 			"MassNavigation", 
 			"StateTreeModule",
-			"MassAIBehavior"
+			"MassAIBehavior",
+			"MassActors"
 		});
-
-		PrivateDependencyModuleNames.AddRange(new string[] {});
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
