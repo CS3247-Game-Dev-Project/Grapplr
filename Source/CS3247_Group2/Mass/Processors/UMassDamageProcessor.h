@@ -13,10 +13,10 @@ class CS3247_GROUP2_API UMassDamageProcessor : public UMassProcessor
 
 public:
 	UMassDamageProcessor();
-	
+
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
-	
+
 	FMassEntityQuery EntityQuery;
 };

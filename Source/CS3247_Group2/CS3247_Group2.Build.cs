@@ -18,10 +18,14 @@ public class CS3247_Group2 : ModuleRules
 			"MassEntity", 
 			"MassCommon", 
 			"MassMovement", 
+			"MassRepresentation",
 			"MassNavigation", 
-			"StateTreeModule",
+			"MassActors",
+			"MassSpawner",
 			"MassAIBehavior",
-			"MassActors"
+			
+			"StateTreeModule",
+			"NavigationSystem",
 		});
 
 		// Uncomment if you are using Slate UI

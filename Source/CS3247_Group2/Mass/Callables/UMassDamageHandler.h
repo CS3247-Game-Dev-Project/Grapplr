@@ -3,10 +3,10 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "MassAgentComponent.h"
-#include "UMassEnemyLibrary.generated.h"
+#include "UMassDamageHandler.generated.h"
 
 UCLASS()
-class CS3247_GROUP2_API UMassEnemyLibrary : public UBlueprintFunctionLibrary
+class CS3247_GROUP2_API UMassDamageHandler : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
@@ -17,6 +17,6 @@ public:
 	 * @param DamageAmount - How much health to subtract
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Mass|Enemy", meta = (WorldContext = "WorldContextObject"))
-	static void ApplyDamageToEntity(const UObject* WorldContextObject, UMassAgentComponent* AgentComponent, float DamageAmount);
+	static void ApplyDamageToEntity(const UObject* WorldContextObject, UMassAgentComponent* AgentComponent,
+	                                float DamageAmount);
 };
-
