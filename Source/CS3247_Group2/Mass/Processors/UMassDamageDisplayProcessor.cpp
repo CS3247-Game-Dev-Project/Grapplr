@@ -16,7 +16,7 @@ UMassDamageDisplayProcessor::UMassDamageDisplayProcessor() : EntityQuery(*this)
 
 void UMassDamageDisplayProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
-	EntityQuery.AddRequirement<FDamageDisplayFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FDamageDisplayFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());

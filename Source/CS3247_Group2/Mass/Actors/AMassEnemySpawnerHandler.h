@@ -5,13 +5,13 @@
 #include "MassEntityConfigAsset.h"
 #include "MassEntityManager.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyWaveStats.h"
-#include "AMassSpawnerHandler.generated.h"
+#include "AMassEnemySpawnerHandler.generated.h"
 
 // Define a delegate that passes back the spawned handles
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMassSpawnComplete, const TArray<FMassEntityHandle>&, SpawnedEntities);
 
 UCLASS()
-class CS3247_GROUP2_API AMassSpawnerHandler : public AActor
+class CS3247_GROUP2_API AMassEnemySpawnerHandler : public AActor
 {
 	GENERATED_BODY()
 

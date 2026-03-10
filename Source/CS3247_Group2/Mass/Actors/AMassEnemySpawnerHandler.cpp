@@ -1,4 +1,4 @@
-﻿#include "AMassSpawnerHandler.h"
+﻿#include "AMassEnemySpawnerHandler.h"
 #include "MassEntityConfigAsset.h"
 #include "MassCommonFragments.h"
 #include "MassSpawnLocationProcessor.h"
@@ -44,7 +44,7 @@ FVector GetValidDonutLocation(const UNavigationSystemV1* NavSys, const FVector& 
 										  FMath::RandRange(-MaxRadius, MaxRadius), MaxRadius);
 }
 
-void AMassSpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)
+void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -79,7 +79,7 @@ void AMassSpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveSt
 	}
 
 	// Push to the deferred command queue
-	TWeakObjectPtr<AMassSpawnerHandler> WeakThis(this);
+	TWeakObjectPtr<AMassEnemySpawnerHandler> WeakThis(this);
 	FMassEntityManager& EntityManager = UE::Mass::Utils::GetEntityManagerChecked(*World);
 	EntityManager.Defer().PushCommand<FMassDeferredSetCommand>(
 		[WeakThis, PreCalculatedLocations, EnemyWaveStats, NumToSpawn, LoadedConfig](const FMassEntityManager& InEntityManager)

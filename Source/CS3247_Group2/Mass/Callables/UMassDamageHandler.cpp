@@ -37,27 +37,15 @@ void UMassDamageHandler::ApplyDamageToEntity(const UObject* WorldContextObject, 
 		FDamageAccumulatorFragment>(EntityHandle))
 	{
 		DamageFrag->PendingDamage += HitDamageAmount;
-	}
-	else
-	{
-		// Add a new instance with the initial damage.
-		UE_LOG(LogTemp, Warning, TEXT("damage accumulator fragment not found, creating new instance"));
-		FDamageAccumulatorFragment DamageAccumulator;
-		DamageAccumulator.PendingDamage = HitDamageAmount;
-		EntityManager.Defer().PushCommand<FMassCommandAddFragmentInstances>(EntityHandle, DamageAccumulator);
-	}
-	
-	// Update damage display fragment.
-	if (FDamageDisplayFragment* DamageDisplayFragment = EntityManager.GetFragmentDataPtr<
-		FDamageDisplayFragment>(EntityHandle))
-	{
-		DamageDisplayFragment->PendingDamage += HitDamageAmount;
-		DamageDisplayFragment->bIsCritical |= IsCriticalHit;
-		DamageDisplayFragment->bHasPendingDisplay = true;
-	}
-	else
-	{
-		// Better to just ignore, since purely visual.
-		UE_LOG(LogTemp, Warning, TEXT("damage display fragment not found!"));
+		// Update damage display fragment.
+		if (FDamageDisplayFragment* DamageDisplayFragment = EntityManager.GetFragmentDataPtr<
+			FDamageDisplayFragment>(EntityHandle))
+		{
+			DamageDisplayFragment->PendingDamage += HitDamageAmount;
+			DamageDisplayFragment->bIsCritical |= IsCriticalHit;
+			DamageDisplayFragment->bHasPendingDisplay = true;
+		} else 	{
+			UE_LOG(LogTemp, Warning, TEXT("damage display fragment not found when damage accumulator fragment exists"));
+		}
 	}
 }
