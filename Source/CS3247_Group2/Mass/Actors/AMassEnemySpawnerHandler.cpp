@@ -10,6 +10,7 @@
 #include "VisualLogger/VisualLogger.h"
 #include "MassActorSubsystem.h"
 #include "NavigationSystem.h"
+#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 
 FVector GetValidDonutLocation(const UNavigationSystemV1* NavSys, const FVector& Origin, const float& MinRadius, const float& MaxRadius)
 {
@@ -125,6 +126,10 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					if (FDamageFragment* Damage = InEntityManager.GetFragmentDataPtr<FDamageFragment>(Entity))
 					{
 						Damage->Damage = EnemyWaveStats.Damage;
+					}
+					if (FDropStatsFragment *DropStats = InEntityManager.GetFragmentDataPtr<FDropStatsFragment>(Entity))
+					{
+						DropStats->ExperienceAmount = EnemyWaveStats.ExperienceDrop;
 					}
 				}
 			}

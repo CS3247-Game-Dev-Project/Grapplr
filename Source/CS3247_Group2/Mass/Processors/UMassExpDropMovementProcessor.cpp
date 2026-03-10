@@ -43,13 +43,12 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 	FVector PlayerLocation = Player->GetActorLocation();
 	const float DeltaTime = Context.GetDeltaTimeSeconds();
 	
-	
 	// Iterate through all entities
 	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, DeltaTime](FMassExecutionContext& IterContext)
 	{
-		// auto MoveTargets = IterContext.GetMutableFragmentView<FMassMoveTargetFragment>();
 		auto Velocities = IterContext.GetMutableFragmentView<FMassVelocityFragment>();
 		auto Transforms = IterContext.GetMutableFragmentView<FTransformFragment>();
+		auto ExpDrops = IterContext.GetFragmentView<FExpDropFragment>();
 
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
@@ -61,11 +60,12 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 				// Calculate "Closer = Faster" factor (ranges from 0.0 at edge to 1.0 at player)
 				float SpeedFactor = 1.0f - (DistanceToPlayer / MaxDetectionRadius);
 				Velocities[i].Value = (PlayerLocation - CurrentLocation).GetSafeNormal() * (BaseMaxSpeed * SpeedFactor);
+				
 				if (DistanceToPlayer < 1.f) {
 					if (Player->Implements<UExpCollectibleInterface>())
 					{
 						// Use the 'Execute_' static wrapper to call the function
-						IExpCollectibleInterface::Execute_OnExperienceCollected(Player, 1);
+						IExpCollectibleInterface::Execute_OnExperienceCollected(Player, ExpDrops[i].ExperienceAmount);
 					}
 					IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));	
 				}

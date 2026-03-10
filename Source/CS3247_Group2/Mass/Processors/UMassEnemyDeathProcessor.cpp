@@ -20,6 +20,7 @@ UMassEnemyDeathProcessor::UMassEnemyDeathProcessor() : EntityQuery(*this)
 void UMassEnemyDeathProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FDropStatsFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::All);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
@@ -30,15 +31,19 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 
 	TArray<FVector> ExpSpawnLocations;
+	TArray<int> DropExpAmounts;
 	TSharedPtr<FMassCommandBuffer> CommandBuffer = Context.GetSharedDeferredCommandBuffer();
+	
 	EntityQuery.ForEachEntityChunk(Context, [&](const FMassExecutionContext& IterContext)
 	{
 		const auto TransformList = IterContext.GetFragmentView<FTransformFragment>();
+		const auto DropStats = IterContext.GetFragmentView<FDropStatsFragment>();
+		
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
-			// TODO: add more death processing, e.g. death animation, score, drops, etc.
-			FVector DeathLocation = TransformList[i].GetTransform().GetLocation();
-			ExpSpawnLocations.Add(DeathLocation);
+			// TODO: add more death processing, e.g. death animation, score (based on exp?), etc.
+			ExpSpawnLocations.Add( TransformList[i].GetTransform().GetLocation());
+			DropExpAmounts.Add(DropStats[i].ExperienceAmount);
 			
 			IterContext.Defer().DestroyEntity(IterContext.GetEntity(i)); 
 			if (GEngine)
@@ -53,18 +58,13 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 		}
 	});
 	
-	SpawnExp(ExpSpawnLocations, CommandBuffer);
+	SpawnExp(ExpSpawnLocations, DropExpAmounts, CommandBuffer);
 }
 
 
-void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const
+void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const
 {
 	if (SpawnLocations.Num() == 0)
-	{
-		return;
-	}
-	UWorld* World = GetWorld();
-	if (!World)
 	{
 		return;
 	}
@@ -78,9 +78,13 @@ void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, const TS
 	}
 
 	CommandBuffer.Get()->PushCommand<FMassDeferredSetCommand>(
-		[SpawnLocations, LoadedConfig](const FMassEntityManager& InEntityManager)
+		[SpawnLocations, DropExpAmounts, LoadedConfig](const FMassEntityManager& InEntityManager)
 		{
 			UWorld* World = InEntityManager.GetWorld();
+			if (!World)
+			{
+				return;
+			}
 			UMassSpawnerSubsystem* SpawnerSubsystem = UWorld::GetSubsystem<UMassSpawnerSubsystem>(World);
 			if (!SpawnerSubsystem)
 			{
@@ -92,28 +96,31 @@ void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, const TS
 			// Handle Transforms (Standard Mass way)
 			FMassTransformsSpawnData TransformData;
 			TransformData.Transforms.Reserve(SpawnLocations.Num());
-			for (int32 i = 0; i < 1; ++i)
+			for (int32 i = 0; i < SpawnLocations.Num(); ++i)
 			{
+				// Scale down exp orb.
 				FTransform InitialTransform(FQuat::Identity, SpawnLocations[i], FVector::OneVector * 0.1);
 				TransformData.Transforms.Add(InitialTransform);
 			}
 
 			// Spawn the Experience Entities
 			TArray<FMassEntityHandle> OutEntities;
-			SpawnerSubsystem->SpawnEntities(EntityTemplate.GetTemplateID(), 1,
+			SpawnerSubsystem->SpawnEntities(EntityTemplate.GetTemplateID(), SpawnLocations.Num(),
 			                                FInstancedStruct::Make(TransformData),
 			                                UMassSpawnLocationProcessor::StaticClass(),
 			                                OutEntities);
 
 			// Batch initialize custom stats fragments
-			for (const FMassEntityHandle& Entity : OutEntities)
+			for (int32 i = 0; i < OutEntities.Num(); ++i)
 			{
+				const FMassEntityHandle& Entity = OutEntities[i];
+
 				if (InEntityManager.IsEntityActive(Entity))
 				{
-					if (FExpDropFragment* ExpDropFragment = InEntityManager.GetFragmentDataPtr<FExpDropFragment>(Entity))
-					{
-						ExpDropFragment->ExperienceAmount = 5; // TODO: let this be configurable.
-					}
+				   if (FExpDropFragment* ExpDropFragment = InEntityManager.GetFragmentDataPtr<FExpDropFragment>(Entity))
+				   {
+					  ExpDropFragment->ExperienceAmount = DropExpAmounts[i];
+				   }
 				}
 			}
 		});

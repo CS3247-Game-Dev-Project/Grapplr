@@ -22,5 +22,5 @@ protected:
 	FMassEntityQuery EntityQuery;
 	
 private:
-	void SpawnExp(TArray<FVector> SpawnLocations, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const;
+	void SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const;
 };
