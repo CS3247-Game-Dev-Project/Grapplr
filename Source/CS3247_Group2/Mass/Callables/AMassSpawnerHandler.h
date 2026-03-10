@@ -18,7 +18,7 @@ class CS3247_GROUP2_API AMassSpawnerHandler : public AActor
 public:
 	// Call this to trigger the spawn
 	UFUNCTION(BlueprintCallable, Category = "Mass|Enemy")
-	void RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float SpawnRadius, int32 NumToSpawn = 1);
+	void RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn = 1);
 
 	UPROPERTY(BlueprintAssignable, Category = "Mass|Enemy")
 	FOnMassSpawnComplete OnSpawnComplete;
