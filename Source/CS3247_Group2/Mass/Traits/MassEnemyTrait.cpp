@@ -1,6 +1,7 @@
 ﻿#include "MassEnemyTrait.h"
 #include "MassEntityTemplateRegistry.h"
 #include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
+#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 #include "CS3247_Group2/Mass/Structs/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Structs/FMovementFragments.h"
 
@@ -12,4 +13,6 @@ void UMassEnemyTrait::BuildTemplate(FMassEntityTemplateBuildContext& BuildContex
 	BuildContext.AddFragment<FMovementSpeedFragment>();
 	BuildContext.AddFragment<FDamageFragment>();
 	BuildContext.AddFragment<FDamageAccumulatorFragment>();
+	BuildContext.AddFragment<FDamageDisplayFragment>();
+	BuildContext.AddFragment<FDropStatsFragment>();
 }

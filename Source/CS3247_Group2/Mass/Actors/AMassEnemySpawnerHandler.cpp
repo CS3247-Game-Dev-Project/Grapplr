@@ -1,4 +1,4 @@
-﻿#include "AMassSpawnerHandler.h"
+﻿#include "AMassEnemySpawnerHandler.h"
 #include "MassEntityConfigAsset.h"
 #include "MassCommonFragments.h"
 #include "MassSpawnLocationProcessor.h"
@@ -10,8 +10,42 @@
 #include "VisualLogger/VisualLogger.h"
 #include "MassActorSubsystem.h"
 #include "NavigationSystem.h"
+#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 
-void AMassSpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float SpawnRadius, int32 NumToSpawn)
+FVector GetValidDonutLocation(const UNavigationSystemV1* NavSys, const FVector& Origin, const float& MinRadius, const float& MaxRadius)
+{
+	// Get a random direction (2D)
+	FVector RandomDir = FMath::VRand();
+	RandomDir.Z = 0.0f;
+	RandomDir.Normalize();
+
+	// Get a random distance between Min and Max
+	// Using Square Root of a random float ensures uniform distribution in a circle
+	const float RandomDist = FMath::Lerp(MinRadius, MaxRadius, FMath::Sqrt(FMath::FRand()));
+
+	const FVector TargetPoint = Origin + (RandomDir * RandomDist);
+
+	// Project that point onto the NavMesh
+	// The 'Extent' is how far up/down the NavMesh will look to find a floor
+	if (FNavLocation ProjectedLocation; NavSys->ProjectPointToNavigation(TargetPoint, ProjectedLocation, FVector(100.f, 100.f, 100000.f)))
+	{
+		return ProjectedLocation.Location;
+	}
+
+	// Fallback: Search for a random reachable point, with no min radius constraint 
+	if (FNavLocation RandomNavLocation; NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random reachable point in navmesh with no min radius"));
+		return RandomNavLocation.Location;
+	}
+
+	// Fallback: If no nav point found, offset slightly so they aren't stacked
+	UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random point"));
+	return Origin + FVector(FMath::RandRange(-MaxRadius, MaxRadius),
+										  FMath::RandRange(-MaxRadius, MaxRadius), MaxRadius);
+}
+
+void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)
 {
 	UWorld* World = GetWorld();
 	if (!World)
@@ -40,25 +74,13 @@ void AMassSpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveSt
 	{
 		for (int32 i = 0; i < NumToSpawn; ++i)
 		{
-			FNavLocation RandomNavLocation;
-			// Search for a reachable point
-			if (NavSys->GetRandomPointInNavigableRadius(SpawnLocation, SpawnRadius, RandomNavLocation))
-			{
-				PreCalculatedLocations.Add(RandomNavLocation.Location);
-			}
-			else
-			{
-				// Fallback: If no nav point found, offset slightly so they aren't stacked
-				UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback"));
-				FVector Fallback = SpawnLocation + FVector(FMath::RandRange(-SpawnRadius, SpawnRadius),
-				                                      FMath::RandRange(-SpawnRadius, SpawnRadius), SpawnRadius);
-				PreCalculatedLocations.Add(Fallback);
-			}
+			PreCalculatedLocations.Add(GetValidDonutLocation(NavSys, SpawnLocation, MinSpawnRadius, MaxSpawnRadius));
+			
 		}
 	}
 
 	// Push to the deferred command queue
-	TWeakObjectPtr<AMassSpawnerHandler> WeakThis(this);
+	TWeakObjectPtr<AMassEnemySpawnerHandler> WeakThis(this);
 	FMassEntityManager& EntityManager = UE::Mass::Utils::GetEntityManagerChecked(*World);
 	EntityManager.Defer().PushCommand<FMassDeferredSetCommand>(
 		[WeakThis, PreCalculatedLocations, EnemyWaveStats, NumToSpawn, LoadedConfig](const FMassEntityManager& InEntityManager)
@@ -104,6 +126,10 @@ void AMassSpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveSt
 					if (FDamageFragment* Damage = InEntityManager.GetFragmentDataPtr<FDamageFragment>(Entity))
 					{
 						Damage->Damage = EnemyWaveStats.Damage;
+					}
+					if (FDropStatsFragment *DropStats = InEntityManager.GetFragmentDataPtr<FDropStatsFragment>(Entity))
+					{
+						DropStats->ExperienceAmount = EnemyWaveStats.ExperienceDrop;
 					}
 				}
 			}

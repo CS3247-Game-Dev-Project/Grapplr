@@ -21,5 +21,5 @@ struct CS3247_GROUP2_API FEnemyWaveStats
 	float UniformScale = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float ExperienceDrop = 1.0f;
+	int ExperienceDrop = 1;
 };
