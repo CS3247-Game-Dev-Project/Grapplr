@@ -4,9 +4,10 @@
 #include "../Structs/FHealthFragments.h"
 #include "MassActorSpawnerSubsystem.h"
 #include "MassSpawnLocationProcessor.h"
+#include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
 
 void UMassDamageHandler::ApplyDamageToEntity(const UObject* WorldContextObject, UMassAgentComponent* AgentComponent,
-                                             float DamageAmount)
+                                             float HitDamageAmount, bool IsCriticalHit)
 {
 	// Get the entity handle, safeguard against missing mass agent.
 	if (!AgentComponent)
@@ -31,17 +32,32 @@ void UMassDamageHandler::ApplyDamageToEntity(const UObject* WorldContextObject, 
 
 	FMassEntityManager& EntityManager = MassSubsystem->GetMutableEntityManager();
 
-	// Check if the entity already has the fragment
+	// Update damage fragment
 	if (FDamageAccumulatorFragment* DamageFrag = EntityManager.GetFragmentDataPtr<
 		FDamageAccumulatorFragment>(EntityHandle))
 	{
-		DamageFrag->PendingDamage += DamageAmount;
+		DamageFrag->PendingDamage += HitDamageAmount;
 	}
 	else
 	{
 		// Add a new instance with the initial damage.
+		UE_LOG(LogTemp, Warning, TEXT("damage accumulator fragment not found, creating new instance"));
 		FDamageAccumulatorFragment DamageAccumulator;
-		DamageAccumulator.PendingDamage = DamageAmount;
+		DamageAccumulator.PendingDamage = HitDamageAmount;
 		EntityManager.Defer().PushCommand<FMassCommandAddFragmentInstances>(EntityHandle, DamageAccumulator);
+	}
+	
+	// Update damage display fragment.
+	if (FDamageDisplayFragment* DamageDisplayFragment = EntityManager.GetFragmentDataPtr<
+		FDamageDisplayFragment>(EntityHandle))
+	{
+		DamageDisplayFragment->PendingDamage += HitDamageAmount;
+		DamageDisplayFragment->bIsCritical |= IsCriticalHit;
+		DamageDisplayFragment->bHasPendingDisplay = true;
+	}
+	else
+	{
+		// Better to just ignore, since purely visual.
+		UE_LOG(LogTemp, Warning, TEXT("damage display fragment not found!"));
 	}
 }

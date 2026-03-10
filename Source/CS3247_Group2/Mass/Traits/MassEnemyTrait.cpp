@@ -12,4 +12,5 @@ void UMassEnemyTrait::BuildTemplate(FMassEntityTemplateBuildContext& BuildContex
 	BuildContext.AddFragment<FMovementSpeedFragment>();
 	BuildContext.AddFragment<FDamageFragment>();
 	BuildContext.AddFragment<FDamageAccumulatorFragment>();
+	BuildContext.AddFragment<FDamageDisplayFragment>();
 }

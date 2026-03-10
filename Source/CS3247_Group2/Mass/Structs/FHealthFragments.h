@@ -18,7 +18,7 @@ struct CS3247_GROUP2_API FDamageAccumulatorFragment : public FMassFragment
 {
 	GENERATED_BODY()
 
-	float PendingDamage = 5.0f;
+	float PendingDamage = 0.0f;
 };
 
 USTRUCT()
