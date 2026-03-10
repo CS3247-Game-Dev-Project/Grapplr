@@ -26,6 +26,7 @@ public class CS3247_Group2 : ModuleRules
 			
 			"StateTreeModule",
 			"NavigationSystem",
+			"Niagara",
 		});
 
 		// Uncomment if you are using Slate UI

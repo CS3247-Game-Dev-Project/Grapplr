@@ -1,5 +1,4 @@
 ﻿#include "UMassMovementProcessor.h"
-
 #include "Kismet/KismetMathLibrary.h"
 #include "MassExecutionContext.h"
 #include "GameFramework/Character.h"

@@ -35,18 +35,7 @@ void UMassDamageProcessor::Execute(FMassEntityManager& EntityManager, FMassExecu
 			DamageList[i].PendingDamage = 0.0f;
 			if (HealthList[i].CurrentHealth <= 0.0f)
 			{
-				// TODO: add more death processing, e.g. death animation, score, drops, etc.
 				IterContext.Defer().AddTag<FDeadTag>(IterContext.GetEntity(i));
-				IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));
-				if (GEngine)
-				{
-					GEngine->AddOnScreenDebugMessage(
-						-1,
-						5.0f,
-						FColor::Red,
-						TEXT("Enemy killed")
-					);
-				}
 			}
 		}
 	});
