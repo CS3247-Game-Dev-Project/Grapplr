@@ -1,10 +1,11 @@
-﻿#include "UMassExpDropMovementProcessor.h"
+﻿#include <atomic>
+#include "UMassExpDropMovementProcessor.h"
 #include "MassExecutionContext.h"
 #include "MassCommonTypes.h"
 #include "MassNavigationFragments.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 #include "MassMovementFragments.h"
-#include "CS3247_Group2/Mass/Interfaces/IExpCollectibleInterface.h"
+#include "CS3247_Group2/Mass/Interfaces/IExpCollectible.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 
@@ -40,16 +41,17 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 		return;
 	}
 	
+	std::atomic<int> TotalExperienceGain = 0;
 	FVector PlayerLocation = Player->GetActorLocation();
 	const float DeltaTime = Context.GetDeltaTimeSeconds();
 	
 	// Iterate through all entities
-	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, DeltaTime](FMassExecutionContext& IterContext)
+	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, DeltaTime, &TotalExperienceGain](FMassExecutionContext& IterContext)
 	{
 		auto Velocities = IterContext.GetMutableFragmentView<FMassVelocityFragment>();
 		auto Transforms = IterContext.GetMutableFragmentView<FTransformFragment>();
 		auto ExpDrops = IterContext.GetFragmentView<FExpDropFragment>();
-
+		int ExperienceChunk = 0;
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
 			const FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
@@ -61,26 +63,22 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 				float SpeedFactor = 1.0f - (DistanceToPlayer / MaxDetectionRadius);
 				Velocities[i].Value = (PlayerLocation - CurrentLocation).GetSafeNormal() * (BaseMaxSpeed * SpeedFactor);
 				
-				if (DistanceToPlayer < 1.f) {
-					if (Player->Implements<UExpCollectibleInterface>())
-					{
-						// Use the 'Execute_' static wrapper to call the function
-						IExpCollectibleInterface::Execute_OnExperienceCollected(Player, ExpDrops[i].ExperienceAmount);
-					}
+				if (DistanceToPlayer < 5.f) {
+					ExperienceChunk += ExpDrops[i].ExperienceAmount;
 					IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));	
 				}
 			} else
-			{	
+			{
 				// Simulate gravity
 				FVector TargetPos = CurrentLocation + (Velocities[i].Value * DeltaTime);	
-				FVector TraceStart = TargetPos + FVector(0, 0, 500.f); 
+				FVector TraceStart = TargetPos + FVector(0, 0, 500.f); // FIXME: causing the exp orbs to bounce back up upon exp drop. 
 				FVector TraceEnd = TargetPos + FVector(0, 0, -5.f);
 				FCollisionQueryParams Params;
 				Params.AddIgnoredActor(Player);
 				if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
 				{
 					// Snap the Height
-					float GroundZ = Hit.ImpactPoint.Z;
+					float GroundZ = Hit.ImpactPoint.Z + 5;
 	    
 					// Update the Transform directly (since Velocity doesn't handle collisions)
 					FTransform UpdatedTransform = Transforms[i].GetTransform();
@@ -93,5 +91,13 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 				}
 			}
 		}
+		
+		TotalExperienceGain += ExperienceChunk;
 	});
+	
+	if (Player && IsValid(Player) && Player->Implements<UExpCollectible>() && TotalExperienceGain > 0)
+	{
+		// Use the 'Execute_' static wrapper to call the function
+		IExpCollectible::Execute_OnExperienceCollected(Player, TotalExperienceGain);
+	}
 }

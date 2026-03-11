@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "MassEntityConfigAsset.h"
 #include "MassEntityManager.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyWaveStats.h"
 #include "AMassEnemySpawnerHandler.generated.h"
@@ -22,8 +21,4 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Mass|Enemy")
 	FOnMassSpawnComplete OnSpawnComplete;
-
-protected:
-	UPROPERTY(EditAnywhere, Category = "Mass|Enemy")
-	TSoftObjectPtr<UMassEntityConfigAsset> EntityConfig;
 };
