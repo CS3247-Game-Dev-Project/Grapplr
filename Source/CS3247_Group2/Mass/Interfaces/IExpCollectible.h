@@ -2,15 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "IExpCollectibleInterface.generated.h"
+#include "IExpCollectible.generated.h"
 
 UINTERFACE(Blueprintable)
-class CS3247_GROUP2_API UExpCollectibleInterface : public UInterface
+class CS3247_GROUP2_API UExpCollectible : public UInterface
 {
 	GENERATED_BODY()
 };
 
-class CS3247_GROUP2_API IExpCollectibleInterface
+class CS3247_GROUP2_API IExpCollectible
 {
 	GENERATED_BODY()
 
@@ -20,6 +20,6 @@ public:
 	 * The player Exp stat should be updated afterward.
 	 * @param Amount amount of exp collected for this instance
 	 */
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mass|Collectibles")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mass|Exp")
 	void OnExperienceCollected(int Amount);
 };

@@ -23,6 +23,7 @@ public class CS3247_Group2 : ModuleRules
 			"MassActors",
 			"MassSpawner",
 			"MassAIBehavior",
+			"MassNavMeshNavigation",
 			
 			"StateTreeModule",
 			"NavigationSystem",

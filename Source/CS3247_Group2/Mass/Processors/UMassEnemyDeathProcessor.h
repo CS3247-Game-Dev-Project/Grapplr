@@ -12,6 +12,7 @@ class CS3247_GROUP2_API UMassEnemyDeathProcessor : public UMassProcessor
 public:
 	UMassEnemyDeathProcessor();
 
+	// Configure via the project settings
 	UPROPERTY(EditAnywhere, Category = "Mass|Enemy", Config)
 	TSoftObjectPtr<UMassEntityConfigAsset> ExpEntityConfig;
 	
@@ -22,5 +23,8 @@ protected:
 	FMassEntityQuery EntityQuery;
 	
 private:
+	UPROPERTY(Transient)
+	TObjectPtr<AActor> Player = nullptr;
+	
 	void SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const;
 };

@@ -1,18 +1,23 @@
 ﻿#include "UMassEnemyDeathProcessor.h"
-
+#include "MassActorSubsystem.h"
 #include "MassCommonFragments.h"
-#include "UMassDamageProcessor.h"
+#include "UMassEnemyDamageProcessor.h"
 #include "MassExecutionContext.h"
 #include "MassSpawnerSubsystem.h"
 #include "MassSpawnerTypes.h"
 #include "MassSpawnLocationProcessor.h"
+#include "CS3247_Group2/Mass/Interfaces/IEnemyDeath.h"
 #include "CS3247_Group2/Mass/Structs//FHealthFragments.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Character.h"
 
 UMassEnemyDeathProcessor::UMassEnemyDeathProcessor() : EntityQuery(*this)
 {
 	bAutoRegisterWithProcessingPhases = true;
-	ExecutionOrder.ExecuteAfter.Add(UMassDamageProcessor::StaticClass()->GetFName());
+	// Forces the processor to run on the Game Thread only (prevents race conditions).
+	bRequiresGameThreadExecution = true;
+	ExecutionOrder.ExecuteAfter.Add(UMassEnemyDamageProcessor::StaticClass()->GetFName());
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
@@ -24,6 +29,11 @@ void UMassEnemyDeathProcessor::ConfigureQueries(const TSharedRef<FMassEntityMana
 	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::All);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
+	
+	// Get Player
+	Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+	
+	ExpEntityConfig.LoadSynchronous(); // Try to load the Entity Config beforehand?
 }
 
 void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
@@ -32,6 +42,7 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 
 	TArray<FVector> ExpSpawnLocations;
 	TArray<int> DropExpAmounts;
+	int EnemyKillCount = 0;
 	TSharedPtr<FMassCommandBuffer> CommandBuffer = Context.GetSharedDeferredCommandBuffer();
 	
 	EntityQuery.ForEachEntityChunk(Context, [&](const FMassExecutionContext& IterContext)
@@ -44,23 +55,20 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 			// TODO: add more death processing, e.g. death animation, score (based on exp?), etc.
 			ExpSpawnLocations.Add( TransformList[i].GetTransform().GetLocation());
 			DropExpAmounts.Add(DropStats[i].ExperienceAmount);
-			
+			EnemyKillCount++;
 			IterContext.Defer().DestroyEntity(IterContext.GetEntity(i)); 
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(
-					-1,
-					5.0f,
-					FColor::Red,
-					TEXT("Enemy killed")
-				);
-			}
 		}
 	});
 	
+	if (Player && IsValid(Player) && Player->Implements<UEnemyDeath>() && EnemyKillCount > 0)
+	{
+		// FIXME: return count of enemy killed.
+		// Use the 'Execute_' static wrapper to call the function
+		IEnemyDeath::Execute_OnEnemyKilled(Player);
+	}
+	
 	SpawnExp(ExpSpawnLocations, DropExpAmounts, CommandBuffer);
 }
-
 
 void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const
 {
@@ -68,8 +76,13 @@ void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<i
 	{
 		return;
 	}
-
+	
 	// Load the Config Asset
+	if (ExpEntityConfig.IsNull())
+	{
+		UE_LOG(LogTemp, Error, TEXT("ExpEntityConfig path is empty!"));
+		return;
+	}
 	const UMassEntityConfigAsset* LoadedConfig = ExpEntityConfig.LoadSynchronous();
 	if (!LoadedConfig)
 	{

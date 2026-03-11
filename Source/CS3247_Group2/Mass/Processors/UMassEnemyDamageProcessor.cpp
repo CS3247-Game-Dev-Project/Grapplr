@@ -1,17 +1,17 @@
-#include "UMassDamageProcessor.h"
+#include "UMassEnemyDamageProcessor.h"
 
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
 #include "CS3247_Group2/Mass/Structs//FHealthFragments.h"
 
-UMassDamageProcessor::UMassDamageProcessor() : EntityQuery(*this)
+UMassEnemyDamageProcessor::UMassEnemyDamageProcessor() : EntityQuery(*this)
 {
 	ExecutionOrder.ExecuteAfter.Add(UE::Mass::ProcessorGroupNames::Movement);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
 
-void UMassDamageProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
+void UMassEnemyDamageProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
 	EntityQuery.AddRequirement<FHealthFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FDamageAccumulatorFragment>(EMassFragmentAccess::ReadWrite);
@@ -20,7 +20,7 @@ void UMassDamageProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
 
-void UMassDamageProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
+void UMassEnemyDamageProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 
@@ -35,6 +35,7 @@ void UMassDamageProcessor::Execute(FMassEntityManager& EntityManager, FMassExecu
 			DamageList[i].PendingDamage = 0.0f;
 			if (HealthList[i].CurrentHealth <= 0.0f)
 			{
+				// TODO: replace with mass signal subsystem for performance.
 				IterContext.Defer().AddTag<FDeadTag>(IterContext.GetEntity(i));
 			}
 		}
