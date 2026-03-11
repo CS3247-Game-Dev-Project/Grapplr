@@ -1,5 +1,4 @@
-﻿#include <atomic>
-#include "UMassPlayerDamageProcessor.h"
+﻿#include "UMassPlayerDamageProcessor.h"
 #include "MassCommonFragments.h"
 #include "UMassEnemyDamageProcessor.h"
 #include "MassCommonTypes.h"
@@ -8,6 +7,7 @@
 #include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include <atomic>
 
 UMassPlayerDamageProcessor::UMassPlayerDamageProcessor() : EntityQuery(*this)
 {
