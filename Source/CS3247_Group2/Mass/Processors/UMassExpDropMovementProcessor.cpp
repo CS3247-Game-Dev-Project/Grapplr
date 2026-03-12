@@ -1,5 +1,4 @@
-﻿#include <atomic>
-#include "UMassExpDropMovementProcessor.h"
+﻿#include "UMassExpDropMovementProcessor.h"
 #include "MassExecutionContext.h"
 #include "MassCommonTypes.h"
 #include "MassNavigationFragments.h"
@@ -8,6 +7,7 @@
 #include "CS3247_Group2/Mass/Interfaces/IExpCollectible.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include <atomic>
 
 UMassExpDropMovementProcessor::UMassExpDropMovementProcessor() : EntityQuery(*this)
 {
