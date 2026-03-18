@@ -2,11 +2,12 @@
 #include "MassExecutionContext.h"
 #include "MassCommonTypes.h"
 #include "MassNavigationFragments.h"
-#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 #include "MassMovementFragments.h"
-#include "CS3247_Group2/Mass/Interfaces/IExpCollectible.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
+#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
+#include "CS3247_Group2/Mass/Interfaces/IExpCollectible.h"
+#include "CS3247_Group2/Mass/Subsystems/UPlayerDataSubsystem.h"
 #include <atomic>
 
 UMassExpDropMovementProcessor::UMassExpDropMovementProcessor() : EntityQuery(*this)
@@ -27,24 +28,17 @@ void UMassExpDropMovementProcessor::ConfigureQueries(const TSharedRef<FMassEntit
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
-
-	// Get Player
-	Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
 }
 
 void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 
-	if (!Player)
-	{
-		return;
-	}
-	
 	std::atomic<int> TotalExperienceGain = 0;
-	FVector PlayerLocation = Player->GetActorLocation();
+	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
+
 	const float DeltaTime = Context.GetDeltaTimeSeconds();
-	
+
 	// Iterate through all entities
 	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, DeltaTime, &TotalExperienceGain](FMassExecutionContext& IterContext)
 	{
@@ -74,7 +68,7 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 				FVector TraceStart = TargetPos + FVector(0, 0, 500.f); // FIXME: causing the exp orbs to bounce back up upon exp drop. 
 				FVector TraceEnd = TargetPos + FVector(0, 0, -5.f);
 				FCollisionQueryParams Params;
-				Params.AddIgnoredActor(Player);
+				// Params.AddIgnoredActor(Player);
 				if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
 				{
 					// Snap the Height
@@ -95,9 +89,9 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 		TotalExperienceGain += ExperienceChunk;
 	});
 	
-	if (Player && IsValid(Player) && Player->Implements<UExpCollectible>() && TotalExperienceGain > 0)
+	AActor* Player = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerPtr.Get();
+	if (TotalExperienceGain > 0 && Player && IsValid(Player) && Player->GetClass()->ImplementsInterface(UExpCollectible::StaticClass()))
 	{
-		// Use the 'Execute_' static wrapper to call the function
 		IExpCollectible::Execute_OnExperienceCollected(Player, TotalExperienceGain);
 	}
 }

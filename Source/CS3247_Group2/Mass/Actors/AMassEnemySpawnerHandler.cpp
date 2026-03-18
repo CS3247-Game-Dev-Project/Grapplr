@@ -9,6 +9,8 @@
 #include "CS3247_Group2/Mass/Structs/FHealthFragments.h"
 #include "VisualLogger/VisualLogger.h"
 #include "MassActorSubsystem.h"
+#include "MassMovementFragments.h"
+#include "MassEntityElementTypes.h"
 #include "MassNavigationFragments.h"
 #include "NavigationSystem.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
@@ -133,7 +135,8 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					}
 					if (FMovementSpeedFragment *MovementSpeedFragment = InEntityManager.GetFragmentDataPtr<FMovementSpeedFragment>(Entity))
 					{
-						MovementSpeedFragment->SpeedMultiplier = EnemyWaveStats.Speed;
+						MovementSpeedFragment->MaxMovementSpeed = EnemyWaveStats.Speed;
+						MovementSpeedFragment->MaxAcceleration = EnemyWaveStats.Speed * 1.5f;
 					}
 				}
 			}

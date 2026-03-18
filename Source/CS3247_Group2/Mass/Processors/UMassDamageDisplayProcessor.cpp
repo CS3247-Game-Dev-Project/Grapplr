@@ -5,7 +5,6 @@
 #include "MassDebugger.h"
 #include "MassExecutionContext.h"
 #include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
-#include "CS3247_Group2/Mass/Subsystems/UDamageManagerSubsystem.h"
 
 UMassDamageDisplayProcessor::UMassDamageDisplayProcessor() : EntityQuery(*this)
 {
@@ -20,8 +19,6 @@ void UMassDamageDisplayProcessor::ConfigureQueries(const TSharedRef<FMassEntityM
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
-	
-	DMSubsystem = GetWorld()->GetSubsystem<UDamageManagerSubsystem>();
 }
 
 void UMassDamageDisplayProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
@@ -54,8 +51,9 @@ void UMassDamageDisplayProcessor::Execute(FMassEntityManager& EntityManager, FMa
 	});
 	
 	// Send all collected data to the Manager in one go
-	if (Locations.Num() > 0 && DMSubsystem && DMSubsystem->DamageManager)
+	if (Locations.Num() > 0)
 	{
-		DMSubsystem->DamageManager->EmitDamageNumbers(Locations, Amounts, Crits);
+		// TODO: fix crash
+		// GetWorld()->GetSubsystem<UDamageManagerSubsystem>()->DamageManager->EmitDamageNumbers(Locations, Amounts, Crits);
 	}
 }

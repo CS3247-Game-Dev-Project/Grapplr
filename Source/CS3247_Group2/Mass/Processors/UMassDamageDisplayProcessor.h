@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "MassEntityQuery.h"
 #include "MassProcessor.h"
-#include "CS3247_Group2/Mass/Subsystems/UDamageManagerSubsystem.h"
 #include "UMassDamageDisplayProcessor.generated.h"
 
 /**
@@ -19,7 +18,4 @@ protected:
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
 
 	FMassEntityQuery EntityQuery;
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<UDamageManagerSubsystem> DMSubsystem = nullptr;
 };

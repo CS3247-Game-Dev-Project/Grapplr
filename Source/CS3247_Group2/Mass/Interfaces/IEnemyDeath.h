@@ -19,5 +19,5 @@ public:
 	 * This function is called whenever an enemy is killed.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mass|Enemy")
-	void OnEnemyKilled();
+	void OnEnemyKilled(int EnemyKillCount);
 };

@@ -9,7 +9,10 @@ struct CS3247_GROUP2_API FMovementSpeedFragment : public FMassFragment
 {
 	GENERATED_BODY()
 
-	float SpeedMultiplier = 1.0f;
+	float MaxMovementSpeed = 200.f;
+	
+	/** should be more than movement speed for reasonable steering */
+	float MaxAcceleration = 250.f;
 };
 
 /**

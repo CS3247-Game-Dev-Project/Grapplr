@@ -1,15 +1,14 @@
 ﻿#pragma once
-
 #include "MassProcessor.h"
-#include "UMassSimpleGroundMovementProcessor.generated.h"
+#include "UMassMovementSpeedProcessor.generated.h"
 
 UCLASS()
-class CS3247_GROUP2_API UMassSimpleGroundMovementProcessor : public UMassProcessor
+class CS3247_GROUP2_API UMassMovementSpeedProcessor : public UMassProcessor
 {
 	GENERATED_BODY()
 
 public:
-	UMassSimpleGroundMovementProcessor();
+	UMassMovementSpeedProcessor();
 
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
