@@ -7,7 +7,6 @@
 #include "CS3247_Group2/Mass/Subsystems/UPlayerDataSubsystem.h"
 #include "MassStateTreeFragments.h"
 #include "MassSignalSubsystem.h"
-#include "CS3247_Group2/Mass/Subsystems/UEnemyGlobalSubsystem.h"
 
 UMassSimpleGroundMovementProcessor::UMassSimpleGroundMovementProcessor() : EntityQuery(*this)
 {
@@ -35,11 +34,9 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 	
 	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
-	const UEnemyGlobalSubsystem* GlobalManager = GetWorld()->GetSubsystem<UEnemyGlobalSubsystem>();
-	float GlobalMovementSpeedMult = GlobalManager ? GlobalManager->GlobalMovementSpeedMultiplier : 1.0f;
 	
 	// Iterate through all entities
-	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, GlobalMovementSpeedMult](FMassExecutionContext& IterContext)
+	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation](FMassExecutionContext& IterContext)
 	{
 		const auto MoveTargets = IterContext.GetMutableFragmentView<FMassMoveTargetFragment>();
 		const auto Transforms = IterContext.GetFragmentView<FTransformFragment>();
@@ -58,7 +55,7 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 			// Set target to the player.
 			MoveTarget.Center = PlayerLocation;
 			MoveTarget.Center.Z = UKismetMathLibrary::Min(CurrentLocation.Z, PlayerLocation.Z);
-			if (Distance.Size() > 10.0f) MoveTarget.Forward = Distance.GetSafeNormal();
+			if (!Distance.IsNearlyZero()) MoveTarget.Forward = Distance.GetSafeNormal();
 			MoveTarget.DistanceToGoal = Distance.Size();
 			MoveTarget.IntentAtGoal = EMassMovementAction::Move;
 			

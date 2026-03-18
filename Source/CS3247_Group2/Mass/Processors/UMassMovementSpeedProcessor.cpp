@@ -4,6 +4,7 @@
 #include "MassMovementFragments.h"
 #include "CS3247_Group2/Mass/Structs/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Subsystems/UEnemyGlobalSubsystem.h"
+#include "Steering/MassSteeringFragments.h"
 
 UMassMovementSpeedProcessor::UMassMovementSpeedProcessor() : EntityQuery(*this)
 {

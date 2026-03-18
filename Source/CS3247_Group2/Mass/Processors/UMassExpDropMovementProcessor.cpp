@@ -61,28 +61,26 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 					ExperienceChunk += ExpDrops[i].ExperienceAmount;
 					IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));	
 				}
+			} 
+			
+			// Else Simulate gravity
+			FVector TargetPos = CurrentLocation + (Velocities[i].Value * DeltaTime);	
+			FVector TraceStart = TargetPos + FVector(0, 0, 500.f); // FIXME: causing the exp orbs to bounce back up upon exp drop. 
+			FVector TraceEnd = TargetPos + FVector(0, 0, -5.f);
+			FCollisionQueryParams Params;
+			if (FHitResult Hit; GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, ECC_WorldStatic, Params))
+			{
+				// Snap the Height
+				float GroundZ = Hit.ImpactPoint.Z + 5;
+    
+				// Update the Transform directly (since Velocity doesn't handle collisions)
+				FTransform UpdatedTransform = Transforms[i].GetTransform();
+				UpdatedTransform.SetLocation(FVector(TargetPos.X, TargetPos.Y, GroundZ));
+				Transforms[i].SetTransform(UpdatedTransform);
+				Velocities[i].Value = FVector::ZeroVector;
 			} else
 			{
-				// Simulate gravity
-				FVector TargetPos = CurrentLocation + (Velocities[i].Value * DeltaTime);	
-				FVector TraceStart = TargetPos + FVector(0, 0, 500.f); // FIXME: causing the exp orbs to bounce back up upon exp drop. 
-				FVector TraceEnd = TargetPos + FVector(0, 0, -5.f);
-				FCollisionQueryParams Params;
-				// Params.AddIgnoredActor(Player);
-				if (FHitResult Hit; GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params))
-				{
-					// Snap the Height
-					float GroundZ = Hit.ImpactPoint.Z + 5;
-	    
-					// Update the Transform directly (since Velocity doesn't handle collisions)
-					FTransform UpdatedTransform = Transforms[i].GetTransform();
-					UpdatedTransform.SetLocation(FVector(TargetPos.X, TargetPos.Y, GroundZ));
-					Transforms[i].SetTransform(UpdatedTransform);
-					Velocities[i].Value = FVector::ZeroVector;
-				} else
-				{
-					Velocities[i].Value += Gravity * DeltaTime;
-				}
+				Velocities[i].Value += Gravity * DeltaTime;
 			}
 		}
 		

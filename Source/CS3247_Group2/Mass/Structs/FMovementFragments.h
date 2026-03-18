@@ -28,7 +28,12 @@ struct CS3247_GROUP2_API FSimpleGroundMovementTag : public FMassTag
 };
 
 /**
- * WIP
+ * Simple flying movement towards the player.
+ * 
+ * Each enemy performs a simple line trace forward and moves up if there is a wall in front of it.
+ * Otherwise, moves towards the player in a straight line if they have line of sight.
+ * 
+ * 
  */
 USTRUCT()
 struct CS3247_GROUP2_API FSimpleFlyerMovementTag : public FMassTag
@@ -37,7 +42,10 @@ struct CS3247_GROUP2_API FSimpleFlyerMovementTag : public FMassTag
 };
 
 /**
- * WIP
+ * Moves towards the player.
+ * 
+ * If there is a wall in front of it, climbs over it, by moving upwards instead, until it has reached the top.
+ * 
  */
 USTRUCT()
 struct CS3247_GROUP2_API FSimpleClimberMovementTag : public FMassTag

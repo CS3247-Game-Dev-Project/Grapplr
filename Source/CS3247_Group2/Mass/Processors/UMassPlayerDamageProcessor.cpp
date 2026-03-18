@@ -3,14 +3,12 @@
 #include "UMassEnemyDamageProcessor.h"
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/Character.h"
 #include "CS3247_Group2/Mass/Interfaces/IPlayerDamageable.h"
 #include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
-#include <atomic>
-
 #include "CS3247_Group2/Mass/Subsystems/UPlayerDataSubsystem.h"
 #include "Kismet/KismetMathLibrary.h"
+
+#include <atomic>
 
 UMassPlayerDamageProcessor::UMassPlayerDamageProcessor() : EntityQuery(*this)
 {
