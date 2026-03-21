@@ -1,23 +1,20 @@
 ﻿#pragma once
 
 #include "MassProcessor.h"
-#include "UMassSimpleGroundMovementProcessor.generated.h"
+#include "UMassSimpleFlyerMovementProcessor.generated.h"
 
 UCLASS()
-class CS3247_GROUP2_API UMassSimpleGroundMovementProcessor : public UMassProcessor
+class CS3247_GROUP2_API UMassSimpleFlyerMovementProcessor : public UMassProcessor
 {
 	GENERATED_BODY()
 
 public:
-	UMassSimpleGroundMovementProcessor();
+	UMassSimpleFlyerMovementProcessor();
 
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
 
 	FMassEntityQuery EntityQuery;
-
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> Player = nullptr;
 };
+

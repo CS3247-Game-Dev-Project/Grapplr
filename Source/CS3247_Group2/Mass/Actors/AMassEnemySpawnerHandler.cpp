@@ -9,7 +9,6 @@
 #include "CS3247_Group2/Mass/Structs/FHealthFragments.h"
 #include "VisualLogger/VisualLogger.h"
 #include "MassActorSubsystem.h"
-#include "MassNavigationFragments.h"
 #include "NavigationSystem.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
 #include "CS3247_Group2/Mass/Structs/FMovementFragments.h"
@@ -42,9 +41,9 @@ FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origi
 	}
 
 	// Fallback: If no nav point found, offset slightly so they aren't stacked
-	UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random point in max radius"));
+	UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: fall from random point within radius square bounds "));
 	return Origin + FVector(FMath::RandRange(-MaxRadius, MaxRadius),
-										  FMath::RandRange(-MaxRadius, MaxRadius), MaxRadius);
+										  FMath::RandRange(-MaxRadius, MaxRadius), 1000.f);
 }
 
 void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)
@@ -133,7 +132,12 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					}
 					if (FMovementSpeedFragment *MovementSpeedFragment = InEntityManager.GetFragmentDataPtr<FMovementSpeedFragment>(Entity))
 					{
-						MovementSpeedFragment->SpeedMultiplier = EnemyWaveStats.Speed;
+						MovementSpeedFragment->MaxMovementSpeed = EnemyWaveStats.Speed;
+						MovementSpeedFragment->MaxAcceleration = EnemyWaveStats.Speed * 1.5; // UNUSED: acceleration is difficult to manipulate.
+					}
+					if (FTransformFragment *TransformFragment = InEntityManager.GetFragmentDataPtr<FTransformFragment>(Entity))
+					{
+						TransformFragment->GetMutableTransform().SetScale3D(FVector::OneVector * EnemyWaveStats.VisualScale);
 					}
 				}
 			}

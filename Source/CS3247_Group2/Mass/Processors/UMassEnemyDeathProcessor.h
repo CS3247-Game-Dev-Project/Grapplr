@@ -23,8 +23,5 @@ protected:
 	FMassEntityQuery EntityQuery;
 	
 private:
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> Player = nullptr;
-	
 	void SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const;
 };
