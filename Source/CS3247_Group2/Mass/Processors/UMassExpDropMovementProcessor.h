@@ -18,9 +18,6 @@ protected:
 	FMassEntityQuery EntityQuery;
 
 private:
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> Player = nullptr;
-
 	const float MaxDetectionRadius = 250.f; 
 	const float BaseMaxSpeed = 700.f;
 	const FVector Gravity = FVector(0.f, 0.f, -980.f);

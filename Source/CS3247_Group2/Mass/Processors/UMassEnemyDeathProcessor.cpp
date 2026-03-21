@@ -9,6 +9,7 @@
 #include "CS3247_Group2/Mass/Interfaces/IEnemyDeath.h"
 #include "CS3247_Group2/Mass/Structs//FHealthFragments.h"
 #include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
+#include "CS3247_Group2/Mass/Subsystems/UPlayerDataSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 
@@ -29,9 +30,6 @@ void UMassEnemyDeathProcessor::ConfigureQueries(const TSharedRef<FMassEntityMana
 	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::All);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
-	
-	// Get Player
-	Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
 	
 	ExpEntityConfig.LoadSynchronous(); // Try to load the Entity Config beforehand?
 }
@@ -60,11 +58,10 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 		}
 	});
 	
-	if (Player && IsValid(Player) && Player->Implements<UEnemyDeath>() && EnemyKillCount > 0)
+	AActor* Player = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerPtr.Get();
+	if (EnemyKillCount > 0 && Player && IsValid(Player) && Player->GetClass()->ImplementsInterface(UEnemyDeath::StaticClass()))
 	{
-		// FIXME: return count of enemy killed.
-		// Use the 'Execute_' static wrapper to call the function
-		IEnemyDeath::Execute_OnEnemyKilled(Player);
+		IEnemyDeath::Execute_OnEnemyKilled(Player, EnemyKillCount);
 	}
 	
 	SpawnExp(ExpSpawnLocations, DropExpAmounts, CommandBuffer);

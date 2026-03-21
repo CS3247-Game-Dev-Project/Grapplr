@@ -17,7 +17,7 @@ struct CS3247_GROUP2_API FEnemyWaveStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Damage = 10.f; // DPS (multiplied by delta time)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float UniformScale = 1.0f;
+	float VisualScale = 1.0f; // The visual scale of the entity.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int ExperienceDrop = 1;
 	

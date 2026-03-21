@@ -19,8 +19,4 @@ protected:
 	virtual void Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context) override;
 
 	FMassEntityQuery EntityQuery;
-	
-private:
-	UPROPERTY(Transient)
-	TObjectPtr<AActor> Player = nullptr;
 };
