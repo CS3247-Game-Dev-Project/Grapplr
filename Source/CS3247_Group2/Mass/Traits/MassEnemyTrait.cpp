@@ -1,9 +1,9 @@
 ﻿#include "MassEnemyTrait.h"
 #include "MassEntityTemplateRegistry.h"
-#include "CS3247_Group2/Mass/Structs/FDamageFragments.h"
-#include "CS3247_Group2/Mass/Structs/FEnemyDrops.h"
-#include "CS3247_Group2/Mass/Structs/FHealthFragments.h"
-#include "CS3247_Group2/Mass/Structs/FMovementFragments.h"
+#include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
+#include "CS3247_Group2/Mass/EnemyDeath/FEnemyDrops.h"
+#include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 
 void UMassEnemyTrait::BuildTemplate(FMassEntityTemplateBuildContext& BuildContext, const UWorld& World) const
 {
@@ -15,4 +15,7 @@ void UMassEnemyTrait::BuildTemplate(FMassEntityTemplateBuildContext& BuildContex
 	BuildContext.AddFragment<FDamageAccumulatorFragment>();
 	BuildContext.AddFragment<FDamageDisplayFragment>();
 	BuildContext.AddFragment<FDropStatsFragment>();
+	BuildContext.AddFragment<FSpatialGridAvoidanceFragment>();
+	BuildContext.AddFragment<FMassDriftFragment>();
+	BuildContext.AddFragment<FHeightFragment>();
 }
