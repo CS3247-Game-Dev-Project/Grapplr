@@ -1,8 +1,13 @@
 ﻿#include "UMassSimpleGroundMovementProcessor.h"
+
+#include "MassCommonFragments.h"
 #include "MassExecutionContext.h"
+#include "MassMovementFragments.h"
 #include "MassNavigationFragments.h"
 #include "MassSignalSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
+#include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
+#include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
 #include "CS3247_Group2/Mass/Movement/FlowField/UFlowFieldSubsystem.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
@@ -11,7 +16,7 @@ UMassSimpleGroundMovementProcessor::UMassSimpleGroundMovementProcessor() : Entit
 	bAutoRegisterWithProcessingPhases = true;
 	ProcessingPhase = EMassProcessingPhase::PrePhysics;
 	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Movement;
-	ExecutionOrder.ExecuteBefore.Add(TEXT("SpatialGridAvoidanceProcessor"));
+	ExecutionOrder.ExecuteAfter.Add(USpatialGridUpdateProcessor::StaticClass()->GetFName());
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
@@ -19,12 +24,11 @@ UMassSimpleGroundMovementProcessor::UMassSimpleGroundMovementProcessor() : Entit
 void UMassSimpleGroundMovementProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
 	EntityQuery.AddRequirement<FMassMoveTargetFragment>(EMassFragmentAccess::ReadWrite);
+	EntityQuery.AddRequirement<FMassDesiredMovementFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
-	EntityQuery.AddRequirement<FMassDriftFragment>(EMassFragmentAccess::ReadOnly);
-	EntityQuery.AddRequirement<FHeightFragment>(EMassFragmentAccess::ReadOnly);
-	
+	EntityQuery.AddRequirement<FMovementSpeedFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddTagRequirement<FSimpleGroundMovementTag>(EMassFragmentPresence::All);
-
+	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
 
@@ -32,59 +36,43 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 {
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 	
+	const UEnemyMovementSubsystem* GlobalManager = GetWorld()->GetSubsystem<UEnemyMovementSubsystem>();
+	float GlobalMovementSpeedMult = GlobalManager ? GlobalManager->GlobalMovementSpeedMultiplier : 1.0f;
 	UFlowFieldSubsystem* FlowFieldSubsystem = GetWorld()->GetSubsystem<UFlowFieldSubsystem>();
-	constexpr float STRAIGHT_THRESHOLD = 500.f;
+	constexpr float CLOSE_TO_PLAYER = 500.f;
 	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
-	
-	// Iterate through all entities
-	EntityQuery.ForEachEntityChunk(Context, [this, PlayerLocation, FlowFieldSubsystem, STRAIGHT_THRESHOLD](FMassExecutionContext& IterContext)
+	float DeltaTime = Context.GetDeltaTimeSeconds();
+
+	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
-		const auto MoveTargets = IterContext.GetMutableFragmentView<FMassMoveTargetFragment>();
+		const auto Targets = IterContext.GetMutableFragmentView<FMassMoveTargetFragment>();
+		const auto Movements = IterContext.GetMutableFragmentView<FMassDesiredMovementFragment>();
 		const auto Transforms = IterContext.GetFragmentView<FTransformFragment>();
-		const auto Drifts = IterContext.GetFragmentView<FMassDriftFragment>();
-		const auto Heights = IterContext.GetFragmentView<FHeightFragment>();
-		const bool bHasGravity = IterContext.DoesArchetypeHaveTag<FGravityTag>();
+		const auto Speeds = IterContext.GetFragmentView<FMovementSpeedFragment>();
 
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
-			auto& MoveTarget = MoveTargets[i];
+			auto& Target = Targets[i];
 			FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = (PlayerLocation - CurrentLocation);
+			float TargetMagnitude = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult * DeltaTime;
 			
 			// Get our smoothed flow direction from the subsystem
 			const FVector2D FlowDir2D = FlowFieldSubsystem->GetFlowAtLocation(CurrentLocation);
+			FVector FlowForward = FVector(FlowDir2D.X, FlowDir2D.Y, 0.0f).GetSafeNormal();
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * TargetMagnitude, DeltaTime, 3.0f);
 			
 			// Point at a spot in the direction the flow field wants us to go
-			MoveTarget.DistanceToGoal = ToPlayer.Size();
-			MoveTarget.IntentAtGoal = EMassMovementAction::Move;
-
-			// Calculate Drift: rotate the flow vector slightly based on a sine wave (base 30 deg offset)
-			const FMassDriftFragment& Drift = Drifts[i];
-			const float SineValue = FMath::Sin((GetWorld()->TimeSeconds + Drift.PhaseOffset) * Drift.DriftFrequency);
-			const float DriftAngle = SineValue * 0.5f * Drift.DriftIntensity;
-			FVector2D RotatedFlow;
-			const float CosA = FMath::Cos(DriftAngle);
-			const float SinA = FMath::Sin(DriftAngle);
-			RotatedFlow.X = FlowDir2D.X * CosA - FlowDir2D.Y * SinA;
-			RotatedFlow.Y = FlowDir2D.X * SinA + FlowDir2D.Y * CosA;
-			
-			FVector FlowForward = FVector(RotatedFlow.X, RotatedFlow.Y, 0.0f).GetSafeNormal();
-			
-			// If very close to player, ignore flow and move straight to target
-			if (ToPlayer.Size() <= STRAIGHT_THRESHOLD || FlowForward.IsNearlyZero()) 
+			Target.DistanceToGoal = ToPlayer.Size();
+			Target.IntentAtGoal = EMassMovementAction::Move;
+			if (FlowForward.IsNearlyZero() || ToPlayer.Size() <= CLOSE_TO_PLAYER)
 			{
-				MoveTarget.Forward = ToPlayer.GetSafeNormal();
-				MoveTarget.Center = FVector(PlayerLocation.X, PlayerLocation.Y, MoveTarget.Center.Z);
+				Target.Forward = ToPlayer.GetSafeNormal2D();	
+				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * TargetMagnitude);
 			} else
 			{
-				MoveTarget.Forward = FlowForward;
-				MoveTarget.Center = CurrentLocation + (MoveTarget.Forward * MoveTarget.DistanceToGoal); 
-			}
-			
-			// Simulate always gravity if above the default ground height.
-			if (!bHasGravity && FlowFieldSubsystem->GetGroundHeight() + Heights[i].Height / 2.f < CurrentLocation.Z)
-			{
-				IterContext.Defer().AddTag<FGravityTag>(IterContext.GetEntity(i));
+				Target.Center = CurrentLocation + (FlowForward * TargetMagnitude); 
+				Target.Forward = FlowForward;
 			}
 		}
 	});

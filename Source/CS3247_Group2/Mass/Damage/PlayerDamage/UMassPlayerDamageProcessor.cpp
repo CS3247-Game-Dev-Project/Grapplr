@@ -2,7 +2,6 @@
 #include "MassCommonFragments.h"
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
-#include "IPlayerDamageable.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
@@ -10,7 +9,9 @@
 
 UMassPlayerDamageProcessor::UMassPlayerDamageProcessor() : EntityQuery(*this)
 {
-	ExecutionOrder.ExecuteAfter.Add(UE::Mass::ProcessorGroupNames::Movement);
+	bAutoRegisterWithProcessingPhases = true;
+	ProcessingPhase = EMassProcessingPhase::PostPhysics;
+	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Tasks;
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
@@ -47,10 +48,17 @@ void UMassPlayerDamageProcessor::Execute(FMassEntityManager& EntityManager, FMas
 		TotalDamage += ChunkDamage;
 	});
 	
-	AActor* Player = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerPtr.Get();
-	if (TotalDamage > 0.0f && Player && IsValid(Player) && Player->GetClass()->ImplementsInterface(UPlayerDamageable::StaticClass()))
+	if (TotalDamage > 0.0f)
 	{
 		const float DeltaTime = Context.GetDeltaTimeSeconds();
-		IPlayerDamageable::Execute_OnPlayerDamaged(Player, TotalDamage * DeltaTime);
+		const float Dmg = TotalDamage * DeltaTime;
+		AsyncTask(ENamedThreads::GameThread, [this, Dmg]()
+		{
+			if (auto* Subsystem = GetWorld()->GetSubsystem<UPlayerDataSubsystem>())
+			{
+				Subsystem->AddPlayerDamage(Dmg);
+			}
+		});
+
 	}
 }

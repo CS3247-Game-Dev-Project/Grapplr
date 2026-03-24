@@ -3,12 +3,13 @@
 #include "MassCommonTypes.h"
 #include "MassNavigationFragments.h"
 #include "MassMovementFragments.h"
-#include <atomic>
-
-#include "IExpCollectible.h"
 #include "CS3247_Group2/Mass/EnemyDeath/FEnemyDrops.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
+
+#include <atomic>
+
+#include "MassCommonFragments.h"
 
 UMassExpDropMovementProcessor::UMassExpDropMovementProcessor() : EntityQuery(*this)
 {
@@ -79,9 +80,15 @@ void UMassExpDropMovementProcessor::Execute(FMassEntityManager& EntityManager, F
 		TotalExperienceGain += ExperienceChunk;
 	});
 	
-	AActor* Player = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerPtr.Get();
-	if (TotalExperienceGain > 0 && Player && IsValid(Player) && Player->GetClass()->ImplementsInterface(UExpCollectible::StaticClass()))
+	if (TotalExperienceGain > 0)
 	{
-		IExpCollectible::Execute_OnExperienceCollected(Player, TotalExperienceGain);
+		int ExpGain = TotalExperienceGain;
+		AsyncTask(ENamedThreads::GameThread, [this, ExpGain]()
+		{
+			if (auto * Subsystem = GetWorld()->GetSubsystem<UPlayerDataSubsystem>())
+			{
+				Subsystem->AddExpCollected(ExpGain);
+			}
+		});
 	}
 }

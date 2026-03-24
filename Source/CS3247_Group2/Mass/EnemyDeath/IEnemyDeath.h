@@ -16,6 +16,8 @@ class CS3247_GROUP2_API IEnemyDeath
 
 public:
 	/**
+	 * DEPRECATED: Use PlayerDataSubsystem instead to avoid unsafe nullptr crash.
+	 *	 
 	 * This function is called whenever an enemy is killed.
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Mass|Enemy")

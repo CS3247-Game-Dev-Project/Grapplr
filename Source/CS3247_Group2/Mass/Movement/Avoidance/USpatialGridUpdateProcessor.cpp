@@ -10,9 +10,8 @@ USpatialGridUpdateProcessor::USpatialGridUpdateProcessor() : EntityQuery(*this)
 {
 	bAutoRegisterWithProcessingPhases = true;
 	ProcessingPhase = EMassProcessingPhase::PrePhysics;
-	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Avoidance;
-	ExecutionOrder.ExecuteBefore.Add(TEXT("SpatialGridAvoidanceProcessor"));
-
+	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::ApplyForces;
+	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
 
@@ -37,12 +36,12 @@ void USpatialGridUpdateProcessor::Execute(FMassEntityManager& EntityManager, FMa
 	bShowDebug = CVarShowMassSpatialGrid.GetValueOnAnyThread() > 0;
 #endif
 	
-	// Include player in avoidance calculations.
-	const auto PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
-	const int32 PlayerGridIdx = UMassSpatialGridSubsystem::GetGridIndex(PlayerLocation);
-	SpatialGridSubsystem->EntityLocations[UMassSpatialGridSubsystem::PLAYER_INDEX] = PlayerLocation;
-	SpatialGridSubsystem->NextEntity[UMassSpatialGridSubsystem::PLAYER_INDEX] = SpatialGridSubsystem->CellHeads[PlayerGridIdx];
-	SpatialGridSubsystem->CellHeads[PlayerGridIdx] = UMassSpatialGridSubsystem::PLAYER_INDEX;
+	// Include player in avoidance calculations (can be toggled)
+	// const auto PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
+	// const int32 PlayerGridIdx = UMassSpatialGridSubsystem::GetGridIndex(PlayerLocation);
+	// SpatialGridSubsystem->EntityLocations[UMassSpatialGridSubsystem::PLAYER_INDEX] = PlayerLocation;
+	// SpatialGridSubsystem->NextEntity[UMassSpatialGridSubsystem::PLAYER_INDEX] = SpatialGridSubsystem->CellHeads[PlayerGridIdx];
+	// SpatialGridSubsystem->CellHeads[PlayerGridIdx] = UMassSpatialGridSubsystem::PLAYER_INDEX;
 
 	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
@@ -50,23 +49,20 @@ void USpatialGridUpdateProcessor::Execute(FMassEntityManager& EntityManager, FMa
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
 			int32 EntityIdx = IterContext.GetEntity(i).Index;
-			FVector Loc = Transforms[i].GetTransform().GetLocation();
-        
-			// Cache location for the next pass
-			SpatialGridSubsystem->EntityLocations[EntityIdx] = Loc;
-
-			int32 GridIdx = UMassSpatialGridSubsystem::GetGridIndex(Loc);
-			SpatialGridSubsystem->NextEntity[EntityIdx] = SpatialGridSubsystem->CellHeads[GridIdx];
-			SpatialGridSubsystem->CellHeads[GridIdx] = EntityIdx;
+			FVector Location = Transforms[i].GetTransform().GetLocation();
+			
+			int32 HashIdx = UMassSpatialGridSubsystem::GetSpatialHashIndex(Location);
+			SpatialGridSubsystem->EntityLocations[EntityIdx] = Location;
+			SpatialGridSubsystem->NextEntity[EntityIdx] = SpatialGridSubsystem->CellHeads[HashIdx];
+			SpatialGridSubsystem->CellHeads[HashIdx] = EntityIdx;
 		
 #if WITH_EDITOR
 			if (bShowDebug) {
-				// Draw a wireframe box for every cell that contains at least one enemy
-				DrawDebugBox(GetWorld(), UMassSpatialGridSubsystem::GetCellCenterFromPos(Loc), FVector(SpatialConfig::CellSize * 0.5f),
+				// Draw a wireframe box for every cell that contains at least one enemy.
+				DrawDebugBox(GetWorld(), UMassSpatialGridSubsystem::GetCellCenterFromPos(Location), FVector(SpatialConfig::CellSize * 0.5f),
 							 FColor::Green, false, -1, 0, 2.0f);
 			}
 #endif
-			
 		}
 	});
 }

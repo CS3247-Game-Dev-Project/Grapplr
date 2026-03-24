@@ -30,11 +30,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "FlowField")
 	float CellSize = 100.0f;
 	
-	/** The default ground height, if the height is less than the ground height, 
-	 * then it represents void location. */
-	UPROPERTY(EditAnywhere, Category = "FlowField")
-	float GroundHeight = 100.0f;
-	
 	FVector LastPlayerLocation;
 	
 	UPROPERTY(EditAnywhere, Category = "FlowField")
@@ -50,6 +45,8 @@ public:
 	bool bShowClimbFlowVectors = true;
 	
 	const uint32 UNREACHABLE = 65535;
+	const int32 NX[4] = {1, -1, 0, 0};
+	const int32 NY[4] = {0, 0, 1, -1};
 	
 	AFlowFieldVolume();
 	virtual void OnConstruction(const FTransform& Transform) override;

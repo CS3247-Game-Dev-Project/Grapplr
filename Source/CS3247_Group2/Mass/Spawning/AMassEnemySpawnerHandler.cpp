@@ -7,6 +7,8 @@
 #include "MassSpawnerTypes.h"
 #include "VisualLogger/VisualLogger.h"
 #include "MassActorSubsystem.h"
+#include "MassMovementFragments.h"
+#include "MassNavigationFragments.h"
 #include "NavigationSystem.h"
 #include "UEnemyCountSubsystem.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
@@ -34,10 +36,15 @@ FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origi
 		return ProjectedLocation.Location;
 	}
 
-	// Fallback: Search for a random reachable point, with no min radius constraint 
+	// Fallback: Search for a random reachable point, with retry (no min radius constraint if fails too many times) 
 	if (FNavLocation RandomNavLocation; NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random reachable point in navmesh with no min radius"));
+		UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random reachable point in navmesh (with no min radius if too many retries)"));
+		for (int retry = 0; retry < 10; retry++)
+		{
+			if ((RandomNavLocation.Location - Origin).Size2D() < MinRadius) break;
+			NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation);
+		}
 		return RandomNavLocation.Location;
 	}
 
@@ -145,6 +152,15 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 						MovementSpeedFragment->MaxMovementSpeed = EnemyWaveStats.Speed;
 						MovementSpeedFragment->MaxAcceleration = EnemyWaveStats.Speed * 1.5; // UNUSED: acceleration is difficult to manipulate.
 					}
+					if (FMassDesiredMovementFragment *MovementFragment = InEntityManager.GetFragmentDataPtr<FMassDesiredMovementFragment>(Entity))
+					{
+						MovementFragment->DesiredMaxSpeedOverride = EnemyWaveStats.Speed;
+					}
+					if (FMassMoveTargetFragment *TargetFragment = InEntityManager.GetFragmentDataPtr<FMassMoveTargetFragment>(Entity))
+					{
+						TargetFragment->DesiredSpeed.Set(EnemyWaveStats.Speed);
+						TargetFragment->SlackRadius = 30.f;
+					}
 					if (FTransformFragment *TransformFragment = InEntityManager.GetFragmentDataPtr<FTransformFragment>(Entity))
 					{
 						TransformFragment->GetMutableTransform().SetScale3D(FVector::OneVector * EnemyWaveStats.VisualScale);
@@ -155,8 +171,9 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					}
 					if (FMassDriftFragment *DriftFragment = InEntityManager.GetFragmentDataPtr<FMassDriftFragment>(Entity))
 					{
-						DriftFragment->DriftIntensity = 1.0;
+						DriftFragment->DriftIntensity = FMath::RandRange(0.1f, 0.3f);
 						DriftFragment->PhaseOffset = FMath::FRandRange(0.0f, 6.28f);
+						DriftFragment->DriftFrequency = FMath::FRandRange(0.1f, 0.5f);
 					}
 					if (FHeightFragment *HeightFragment = InEntityManager.GetFragmentDataPtr<FHeightFragment>(Entity)) {
 						HeightFragment->Height = EnemyWaveStats.BaseMeshHeight * EnemyWaveStats.VisualScale;

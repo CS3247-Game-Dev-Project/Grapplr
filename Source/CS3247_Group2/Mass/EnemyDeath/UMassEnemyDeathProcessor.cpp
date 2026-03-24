@@ -1,7 +1,6 @@
 ﻿#include "UMassEnemyDeathProcessor.h"
 
 #include "FEnemyDrops.h"
-#include "IEnemyDeath.h"
 #include "MassActorSubsystem.h"
 #include "MassCommonFragments.h"
 #include "MassExecutionContext.h"
@@ -9,16 +8,17 @@
 #include "MassSpawnerTypes.h"
 #include "MassSpawnLocationProcessor.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
-#include "CS3247_Group2/Mass/Damage/EnemyDamage/UMassEnemyDamageProcessor.h"
+#include "CS3247_Group2/Mass/Movement/StateTree/FMassStateTreeMoveToPlayerTask.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 #include "CS3247_Group2/Mass/Spawning/UEnemyCountSubsystem.h"
 
 UMassEnemyDeathProcessor::UMassEnemyDeathProcessor() : EntityQuery(*this)
 {
 	bAutoRegisterWithProcessingPhases = true;
-	// Forces the processor to run on the Game Thread only (prevents race conditions).
 	bRequiresGameThreadExecution = true;
-	ExecutionOrder.ExecuteAfter.Add(UMassEnemyDamageProcessor::StaticClass()->GetFName());
+	ProcessingPhase = EMassProcessingPhase::PostPhysics;
+	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Tasks;
+	ExecutionOrder.ExecuteAfter.Add(TEXT("UMassEnemyDamageProcessor"));
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
@@ -31,7 +31,7 @@ void UMassEnemyDeathProcessor::ConfigureQueries(const TSharedRef<FMassEntityMana
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 	
-	ExpEntityConfig.LoadSynchronous(); // Try to load the Entity Config beforehand?
+	ExpEntityConfig.LoadSynchronous(); // FIXME: try to load the Entity Config beforehand? avoids error with this?
 }
 
 void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
@@ -60,15 +60,16 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 	
 	if (EnemyKillCount > 0)
 	{
-		AActor* Player = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerPtr.Get();
-		if (Player && IsValid(Player) && Player->GetClass()->ImplementsInterface(UEnemyDeath::StaticClass()))
+		AsyncTask(ENamedThreads::GameThread, [this, EnemyKillCount]()
 		{
-			IEnemyDeath::Execute_OnEnemyKilled(Player, EnemyKillCount);
-		}
-		if (UEnemyCountSubsystem* EnemyCountSubsystem = GetWorld()->GetSubsystem<UEnemyCountSubsystem>())
-		{
-			EnemyCountSubsystem->EnemyCount -= EnemyKillCount;
-		}
+			if (auto* Subsystem = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()) {
+				Subsystem->AddEnemyKills(EnemyKillCount);
+			}
+			if (auto * Subsystem = GetWorld()->GetSubsystem<UEnemyCountSubsystem>())
+			{
+				Subsystem->EnemyCount -= EnemyKillCount;
+			}
+		});
 	}
 	
 	SpawnExp(ExpSpawnLocations, DropExpAmounts, CommandBuffer);

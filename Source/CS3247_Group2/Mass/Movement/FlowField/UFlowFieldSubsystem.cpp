@@ -3,6 +3,7 @@
 
 FVector2D UFlowFieldSubsystem::GetFlowAtLocation(const FVector& Location) const
 {
+	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return FVector2D::ZeroVector;
 	
 	// Convert World Position to Grid Coordinates (float)
@@ -35,30 +36,49 @@ FVector2D UFlowFieldSubsystem::GetFlowAtLocation(const FVector& Location) const
 
 bool UFlowFieldSubsystem::IsLocationNearEdge(const FVector& Location) const
 {
+	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return true;
 	
-	// Convert World Position to Grid Coordinates (float)
+	auto Coords = ConvertToGridCoords(Location);
+	
+	// Identify the surrounding cells
+	float ExpectedHeight = GetRawHeightFromAsset(Coords.X, Coords.Y);
+	for (int32 nx = -1; nx <= 1; ++nx) {
+		for (int32 ny = -1; ny <= 1; ++ny) {
+			if (nx == 0 && ny == 0) continue;
+
+			int32 NeighborX = Coords.X + nx;
+			int32 NeighborY = Coords.Y + ny;
+			if (NeighborX < 0 || NeighborX >= ActiveVolume->TargetAsset->GridDimensions.X ||
+				NeighborY < 0 || NeighborY >= ActiveVolume->TargetAsset->GridDimensions.Y) continue;
+			
+			if (FMath::Abs(ExpectedHeight - GetRawHeightFromAsset(NeighborX, NeighborY)) >= 0.1f)
+			{
+				return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
+FVector2D UFlowFieldSubsystem::ConvertToGridCoords(const FVector& Location) const
+{
+	WarnIfNoAsset();
+	if (!ActiveVolume || !ActiveVolume->TargetAsset) return FVector2D::ZeroVector;
+	
 	FVector RelativePos = Location - ActiveVolume->TargetAsset->GridWorldOrigin;
 	float GridX = RelativePos.X / ActiveVolume->CellSize;
 	float GridY = RelativePos.Y / ActiveVolume->CellSize;
-
-	// Identify the 4 surrounding cells
-	int32 X0 = FMath::FloorToInt(GridX);
-	int32 Y0 = FMath::FloorToInt(GridY);
-	int32 X1 = X0 + 1;
-	int32 Y1 = Y0 + 1;
+	int32 x = FMath::FloorToInt(GridX);
+	int32 y = FMath::FloorToInt(GridY);
 	
-	// Heights from data asset
-	auto V00 = GetRawHeightFromAsset(X0, Y0);
-	auto V10 = GetRawHeightFromAsset(X1, Y0);
-	auto V01 = GetRawHeightFromAsset(X0, Y1);
-	auto V11 = GetRawHeightFromAsset(X1, Y1);
-	
-	return !(FMath::Max(FMath::Abs(V00 - V10), FMath::Abs(V01 - V11), FMath::Abs(V00 - V11)) < 0.1f);
+	return FVector2D(x, y);
 }
 
 FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y) const
 {
+	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return FVector2D::ZeroVector;
 	
 	// Clamp coordinates
@@ -66,11 +86,12 @@ FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y) const
 	int32 SafeY = FMath::Clamp(Y, 0, ActiveVolume->TargetAsset->GridDimensions.Y - 1);
     
 	int32 Index = (SafeY * ActiveVolume->TargetAsset->GridDimensions.Y) + SafeX;
-	return ActiveVolume->TargetAsset->GroundFlowVectors[Index]; // TODO: refactor to something more flexible
+	return ActiveVolume->TargetAsset->GroundFlowVectors[Index]; // TODO: support separate function for climbing
 }
 
 float UFlowFieldSubsystem::GetRawHeightFromAsset(int32 X, int32 Y) const
 {
+	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return 0;
 	
 	// Clamp coordinates

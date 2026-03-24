@@ -1,14 +1,19 @@
 ﻿#pragma once
-#include "MassProcessor.h"
-#include "UMassMovementSpeedProcessor.generated.h"
 
+#include "MassProcessor.h"
+#include "UMassObjectGravityProcessor.generated.h"
+
+/**
+ * Simulates gravity for the entity object. 
+ * This simple implementation just affects the velocity of objects. 
+ */
 UCLASS()
-class CS3247_GROUP2_API UMassMovementSpeedProcessor : public UMassProcessor
+class CS3247_GROUP2_API UMassObjectGravityProcessor : public UMassProcessor
 {
 	GENERATED_BODY()
 
 public:
-	UMassMovementSpeedProcessor();
+	UMassObjectGravityProcessor();
 
 protected:
 	virtual void ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager) override;

@@ -5,6 +5,8 @@
 #include "StateTreeLinker.h"
 #include "StateTreeExecutionContext.h"
 
+// TODO: work with FMassMoveTargetFragment to set target to player location!
+
 EStateTreeRunStatus FMassStateTreeMoveToPlayerTask::EnterState(
 	FStateTreeExecutionContext& Context,
 	const FStateTreeTransitionResult& Transition) const

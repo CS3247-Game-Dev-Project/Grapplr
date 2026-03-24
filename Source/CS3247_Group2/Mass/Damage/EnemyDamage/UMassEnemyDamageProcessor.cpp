@@ -6,7 +6,9 @@
 
 UMassEnemyDamageProcessor::UMassEnemyDamageProcessor() : EntityQuery(*this)
 {
-	ExecutionOrder.ExecuteAfter.Add(UE::Mass::ProcessorGroupNames::Movement);
+	bAutoRegisterWithProcessingPhases = true;
+	ProcessingPhase = EMassProcessingPhase::PostPhysics;
+	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Tasks;
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }
@@ -35,7 +37,7 @@ void UMassEnemyDamageProcessor::Execute(FMassEntityManager& EntityManager, FMass
 			DamageList[i].PendingDamage = 0.0f;
 			if (HealthList[i].CurrentHealth <= 0.0f)
 			{
-				// TODO: replace with mass signal subsystem for performance.
+				// TODO: replace with mass signal subsystem for performance?
 				IterContext.Defer().AddTag<FDeadTag>(IterContext.GetEntity(i));
 			}
 		}

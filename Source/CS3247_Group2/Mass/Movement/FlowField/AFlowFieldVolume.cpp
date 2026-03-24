@@ -8,7 +8,7 @@ AFlowFieldVolume::AFlowFieldVolume()
     BoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("GridBounds"));
     RootComponent = BoxComponent;
 
-    // Set default size (e.g., 10m x 10m x 5m)
+    // Set default size
     BoxComponent->SetBoxExtent(FVector(500.0f, 500.0f, 250.0f));
     
     // Ensure it doesn't block the trace we're about to run
@@ -16,9 +16,8 @@ AFlowFieldVolume::AFlowFieldVolume()
     BoxComponent->SetCanEverAffectNavigation(false);
     
     // Create a local line batcher
-    MyLineBatcher = CreateDefaultSubobject<ULineBatchComponent>(TEXT("LocalLineBatcher"));
-    
     // Ensure it doesn't render in the actual game, only the editor
+    MyLineBatcher = CreateDefaultSubobject<ULineBatchComponent>(TEXT("LocalLineBatcher"));
     MyLineBatcher->SetIsVisualizationComponent(true);
 }
 
@@ -39,17 +38,17 @@ void AFlowFieldVolume::BeginPlay()
 
 void AFlowFieldVolume::BakeFlowField() const
 {
-    if (!TargetAsset || !BoxComponent) return;
+    if (!TargetAsset || !BoxComponent)
+    {
+		UE_LOG(LogTemp, Warning, TEXT("AFlowFieldVolume: No target asset found, unable to bake! Please create a UFlowDataAsset, and add it into the AFlowFieldVolume!"));
+        return;
+    }
 
     // Get the actual scaled extent and world center from the BoxComponent
     FVector Extent = BoxComponent->GetScaledBoxExtent();
     FVector Origin = BoxComponent->GetComponentLocation();
-
-    // The rest of the logic remains the same, 
-    // but now Extent.X/Y/Z will actually have values!
     int32 GridX = FMath::FloorToInt((Extent.X * 2) / CellSize);
     int32 GridY = FMath::FloorToInt((Extent.Y * 2) / CellSize);
-    
     FVector RawMin = Origin - Extent;
     FVector SnappedMin = FVector(
         FMath::GridSnap(RawMin.X, CellSize),
@@ -57,25 +56,22 @@ void AFlowFieldVolume::BakeFlowField() const
         RawMin.Z
     );
     
-    TargetAsset->BakedCosts.Empty();
-    TargetAsset->BakedCosts.SetNumZeroed(GridX * GridY);
     TargetAsset->BakedHeights.Empty();
     TargetAsset->BakedHeights.SetNumZeroed(GridX * GridY);
     
     TargetAsset->GridDimensions = FIntPoint(GridX, GridY);
     TargetAsset->GridWorldOrigin = SnappedMin;
     
-    // 3. Trace Settings
+    // Trace Settings
     float TopZ = Origin.Z + Extent.Z;
     float BottomZ = Origin.Z - Extent.Z;
+    TargetAsset->GroundHeight = TopZ;
 
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
 
-    for (int32 y = 0; y < GridY; ++y)
-    {
-        for (int32 x = 0; x < GridX; ++x)
-        {
+    for (int32 y = 0; y < GridY; ++y) {
+        for (int32 x = 0; x < GridX; ++x) {
             int32 Index = (y * GridX) + x;
             
             // Calculate trace start/end in world space
@@ -88,21 +84,15 @@ void AFlowFieldVolume::BakeFlowField() const
             FHitResult Hit;
             if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
             { 
-                // TODO: use ground height in this calculation
-                // If it's too high (e.g., hitting a building roof), increase cost.
-                // Or if your buildings are just obstacles, you might use physical materials.
-                // For now, let's assume if it hits anything, it's cost 1 (walkable).
                 TargetAsset->BakedHeights[Index] = Hit.Location.Z;
-                TargetAsset->BakedCosts[Index] = 1;
             } else {
-                // Hit nothing? It's a void/cliff. Block it.
-                TargetAsset->BakedCosts[Index] = 255;
                 TargetAsset->BakedHeights[Index] = BottomZ;
             }
+            TargetAsset->GroundHeight = FMath::Min(TargetAsset->GroundHeight, TargetAsset->BakedHeights[Index]);
         }
     }
 
-    // 2. Persistence Logic
+    // Persistence Logic
     TargetAsset->Modify();
     
     UE_LOG(LogTemp, Warning, TEXT("Flow Field Baked Successfully! Please save the %s data asset!"), *TargetAsset->GetName());
@@ -113,24 +103,23 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
     if (!MyLineBatcher) return;
     MyLineBatcher->Flush();
 
-    if (!bShowDebug || !TargetAsset || TargetAsset->BakedCosts.Num() == 0) return;
+    if (!bShowDebug || !TargetAsset || TargetAsset->BakedHeights.Num() == 0) return;
     
     const int32 GridX = TargetAsset->GridDimensions.X;
     const float HalfCell = CellSize * 0.5f;
 
-    for (int32 i = 0; i < TargetAsset->BakedCosts.Num(); ++i)
+    for (int32 i = 0; i < TargetAsset->BakedHeights.Num(); ++i)
     {
         int32 x = i % GridX;
         int32 y = i / GridX;
 
         FVector Center = TargetAsset->GridWorldOrigin + FVector(x * CellSize + HalfCell, y * CellSize + HalfCell, 0.0f);
         Center.Z = TargetAsset->BakedHeights[i];
-        FColor CellColor = (TargetAsset->BakedCosts[i] >= 255) ? FColor::Red : FColor::Green;
 
         MyLineBatcher->DrawBox(
             Center, 
             FVector(HalfCell - 2.0f, HalfCell - 2.0f, 2.0f), 
-            CellColor, 
+            FColor::Green, 
             -1,
             0,
             1.f
@@ -162,7 +151,7 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
 
 void AFlowFieldVolume::UpdateAllFlowFields()
 {
-    if (!TargetAsset || TargetAsset->BakedCosts.Num() == 0) return;
+    if (!TargetAsset || TargetAsset->BakedHeights.Num() == 0) return;
 
     FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
     
@@ -186,15 +175,14 @@ void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, 
     const int32 GridY = TargetAsset->GridDimensions.Y;
     const int32 TotalCells = GridX * GridY;
     
-    // TODO: cache and reuse previous values.
+    // Find Goal
     TArray<uint32> IntegrationField;
     IntegrationField.Init(UNREACHABLE, TotalCells);
     TArray<int32> PriorityQueue;
-    auto CompareCosts = [&](int32 A, int32 B) {
-        return IntegrationField[A] < IntegrationField[B];
+    const auto COMPARE_COSTS = [&](int32 A, int32 B) {
+        return  IntegrationField[A] < IntegrationField[B];
     };
-
-    // Find Goal
+    
     FVector RelativePos = PlayerLocation - TargetAsset->GridWorldOrigin;
     int32 TargetX = FMath::FloorToInt(RelativePos.X / CellSize);
     int32 TargetY = FMath::FloorToInt(RelativePos.Y / CellSize);
@@ -202,40 +190,35 @@ void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, 
     {
         int32 TargetIndex = (TargetY * GridX) + TargetX;
         IntegrationField[TargetIndex] = 0;
-        PriorityQueue.HeapPush(TargetIndex, CompareCosts);
+        PriorityQueue.HeapPush(TargetIndex, COMPARE_COSTS);
     }
 
     // Dijkstra Pass
     while (PriorityQueue.Num() > 0)
     {
         int32 CurrIdx;
-        PriorityQueue.HeapPop(CurrIdx, CompareCosts);
+        PriorityQueue.HeapPop(CurrIdx, COMPARE_COSTS);
         
         // Check 4 cardinal neighbors
         const int32 CurX = CurrIdx % GridX;
         const int32 CurY = CurrIdx / GridX;
-        const int32 NX[4] = {1, -1, 0, 0};
-        const int32 NY[4] = {0, 0, 1, -1};
 
         for (int32 i = 0; i < 4; ++i)
         {
             int32 NeighborX = CurX + NX[i];
             int32 NeighborY = CurY + NY[i];
+            int32 NeighborIdx = (NeighborY * GridX) + NeighborX;
 
             if (NeighborX < 0 || NeighborX >= GridX || NeighborY < 0 || NeighborY >= GridY) continue;
-
-            int32 NeighborIdx = (NeighborY * GridX) + NeighborX;
             
-            // Validation
-            bool bValid = (TargetAsset->BakedCosts[NeighborIdx] < 255);
             float HeightDiff = TargetAsset->BakedHeights[CurrIdx] - TargetAsset->BakedHeights[NeighborIdx];
-            if ((bIsClimbing || HeightDiff <= 0) && bValid)
+            if (bIsClimbing || HeightDiff <= 0)
             {
-                uint32 NewCost = IntegrationField[CurrIdx] + TargetAsset->BakedCosts[NeighborIdx] + FMath::Max(HeightDiff / CellSize, 0);
+                uint32 NewCost = IntegrationField[CurrIdx] + 1 + FMath::Max(HeightDiff / CellSize, 0);
                 if (NewCost < IntegrationField[NeighborIdx])
                 {
                     IntegrationField[NeighborIdx] = NewCost;
-                    PriorityQueue.HeapPush(NeighborIdx, CompareCosts);
+                    PriorityQueue.HeapPush(NeighborIdx, COMPARE_COSTS);
                 }
             }
         }
@@ -272,7 +255,7 @@ void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, 
                 
                 // Gradient = CurrentCost - NeighborCost
                 // If neighbor is cheaper, result is positive, pulling vector toward it
-                float Weight = FMath::Max(IntegrationField[nIdx] - IntegrationField[i], 0.f);
+                float Weight = FMath::Max( IntegrationField[nIdx] -  IntegrationField[i], 0.f);
                 AccumulatedGradient += FVector2D(nx, ny) * FMath::Square(Weight);
                 
             }

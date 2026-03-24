@@ -8,7 +8,9 @@
 
 UMassDamageDisplayProcessor::UMassDamageDisplayProcessor() : EntityQuery(*this)
 {
-	ExecutionOrder.ExecuteAfter.Add(UE::Mass::ProcessorGroupNames::Movement);
+	bAutoRegisterWithProcessingPhases = true;
+	ProcessingPhase = EMassProcessingPhase::PostPhysics;
+	ExecutionOrder.ExecuteInGroup = UE::Mass::ProcessorGroupNames::Tasks;
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONSTRUCTED: %s"), *GetName());
 }

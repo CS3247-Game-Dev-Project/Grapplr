@@ -30,8 +30,8 @@ struct CS3247_GROUP2_API FMassDriftFragment : public FMassFragment
 	/** How strong this specific entity's drift is */
 	float DriftIntensity = 1.0f;
 
-	/** The period of the sinusoidal drift. */
-	float DriftFrequency = 2.0f;
+	/** The frequency of the sinusoidal drift. */
+	float DriftFrequency = 1.0f;
 };
 
 /**
@@ -49,7 +49,7 @@ struct CS3247_GROUP2_API FHeightFragment : public FMassFragment
 
 /**
  * Whether gravity is applied to the entity (e.g. exp, ground enemies).
- * For performance, we can toggle this on/off.
+ * For performance, we can toggle this on/off for exp orbs.
  */
 USTRUCT()
 struct CS3247_GROUP2_API FGravityTag : public FMassTag

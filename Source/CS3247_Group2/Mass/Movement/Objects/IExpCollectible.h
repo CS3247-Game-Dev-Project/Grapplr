@@ -16,6 +16,8 @@ class CS3247_GROUP2_API IExpCollectible
 
 public:
 	/**
+	 * DEPRECATED: Use PlayerDataSubsystem instead to avoid unsafe nullptr crash.
+	 * 
 	 * This function is called whenever an Exp Drop is collected (and removed).
 	 * The player Exp stat should be updated afterward.
 	 * @param Amount amount of exp collected for this instance
