@@ -24,8 +24,11 @@ public class CS3247_Group2 : ModuleRules
 			"MassSpawner",
 			"MassAIBehavior",
 			"MassNavMeshNavigation",
+			"MassSignals",
 			
 			"StateTreeModule",
+			"GameplayStateTreeModule",
+			
 			"NavigationSystem",
 			"Niagara",
 		});
