@@ -41,7 +41,7 @@ void USpatialGridAvoidanceProcessor::Execute(FMassEntityManager& EntityManager, 
     auto SpatialGridSubsystem = GetWorld()->GetSubsystem<UMassSpatialGridSubsystem>();
     const float DeltaTime = Context.GetDeltaTimeSeconds();
 
-    const float AVOIDANCE_STRENGTH = 100.0f;
+    const float AVOIDANCE_STRENGTH = 2.0f;
     const float AVOIDANCE_WEIGHT = 0.9f;
     const float PERSONAL_SPACE = 0.f;
 
@@ -58,6 +58,7 @@ void USpatialGridAvoidanceProcessor::Execute(FMassEntityManager& EntityManager, 
             FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
         	auto& Target = Targets[i];
             float Radius = Avoidances[i].AvoidanceSpaceRadius;
+        	float MovementMagnitude = Movements[i].DesiredVelocity.Size();
             
             FVector TotalSeparation = FVector::ZeroVector;
         	
@@ -83,15 +84,16 @@ void USpatialGridAvoidanceProcessor::Execute(FMassEntityManager& EntityManager, 
                     // Closer = Much stronger force. Edge = Almost zero force.
                     float Strength = FMath::Clamp(1.0f - (ToOther.Size() / CombinedRadius), 0.0f, 1.0f) * AVOIDANCE_STRENGTH;
                     
-                	TotalSeparation += ToOther * Strength;
+                	TotalSeparation += ToOther * Strength * MovementMagnitude;
                 }
             }
 
         	// Apply separation force to the target movement
-            // Target.Forward = FMath::Lerp(Target.Forward, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
         	Movements[i].DesiredVelocity = FMath::Lerp(Movements[i].DesiredVelocity, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
+        	Movements[i].DesiredVelocity = Movements[i].DesiredVelocity.GetSafeNormal() * MovementMagnitude;
         	
-        	// Velocities[i].Value = TotalSeparation * DeltaTime;
+        	// UNUSED: changing the forward changes the direction which the enemy faces.
+            // Target.Forward = FMath::Lerp(Target.Forward, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
         	
         	// Secondary update to location, in case target movement force applications are reordered in the processor pipeline,
         	// resulting in the separation force not being applied.

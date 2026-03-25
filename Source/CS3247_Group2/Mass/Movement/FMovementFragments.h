@@ -108,6 +108,15 @@ struct CS3247_GROUP2_API FSimpleFlyerMovementTag : public FMassTag
 	GENERATED_BODY()
 };
 
+/** Flight specific configurations. */
+USTRUCT()
+struct CS3247_GROUP2_API FSimpleFlyerConfigFragment : public FMassFragment
+{
+	GENERATED_BODY()
+	float FlightHeightFrequency = 0.1f;
+	float FlightHeightAmplitude = 1000.0f;
+};
+
 /**
  * Moves towards the player.
  * 

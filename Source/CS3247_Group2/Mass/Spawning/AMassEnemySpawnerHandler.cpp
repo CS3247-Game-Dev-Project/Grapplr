@@ -159,7 +159,7 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					if (FMassMoveTargetFragment *TargetFragment = InEntityManager.GetFragmentDataPtr<FMassMoveTargetFragment>(Entity))
 					{
 						TargetFragment->DesiredSpeed.Set(EnemyWaveStats.Speed);
-						TargetFragment->SlackRadius = 30.f;
+						TargetFragment->SlackRadius = 100.f;
 					}
 					if (FTransformFragment *TransformFragment = InEntityManager.GetFragmentDataPtr<FTransformFragment>(Entity))
 					{
@@ -177,6 +177,11 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					}
 					if (FHeightFragment *HeightFragment = InEntityManager.GetFragmentDataPtr<FHeightFragment>(Entity)) {
 						HeightFragment->Height = EnemyWaveStats.BaseMeshHeight * EnemyWaveStats.VisualScale;
+					}
+					if (FSimpleFlyerConfigFragment *ConfigFragment = InEntityManager.GetFragmentDataPtr<FSimpleFlyerConfigFragment>(Entity))
+					{
+						ConfigFragment->FlightHeightAmplitude = FMath::RandRange(1000.f, 1500.f);	
+						ConfigFragment->FlightHeightFrequency = FMath::RandRange(0.01f, 0.2f);	
 					}
 				}
 			}
