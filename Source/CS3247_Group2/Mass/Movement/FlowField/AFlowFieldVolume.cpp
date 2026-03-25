@@ -115,7 +115,7 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
 
         FVector Center = TargetAsset->GridWorldOrigin + FVector(x * CellSize + HalfCell, y * CellSize + HalfCell, 0.0f);
         Center.Z = TargetAsset->BakedHeights[i];
-
+        
         MyLineBatcher->DrawBox(
             Center, 
             FVector(HalfCell - 2.0f, HalfCell - 2.0f, 2.0f), 
