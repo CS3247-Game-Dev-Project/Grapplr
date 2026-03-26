@@ -55,12 +55,12 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 			auto& Target = Targets[i];
 			FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = (PlayerLocation - CurrentLocation);
-			float TargetMagnitude = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult * DeltaTime;
+			float CurrentMaxSpeed = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
 			
 			// Get our smoothed flow direction from the subsystem
 			const FVector2D FlowDir2D = FlowFieldSubsystem->GetFlowAtLocation(CurrentLocation);
 			FVector FlowForward = FVector(FlowDir2D.X, FlowDir2D.Y, 0.0f).GetSafeNormal();
-			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * TargetMagnitude, DeltaTime, 3.0f);
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * CurrentMaxSpeed, DeltaTime, 3.0f);
 			
 			// Point at a spot in the direction the flow field wants us to go
 			Target.DistanceToGoal = ToPlayer.Size();
@@ -68,10 +68,10 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 			if (FlowForward.IsNearlyZero() || ToPlayer.Size() <= CLOSE_TO_PLAYER)
 			{
 				Target.Forward = ToPlayer.GetSafeNormal2D();	
-				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * TargetMagnitude);
+				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * CurrentMaxSpeed * DeltaTime);
 			} else
 			{
-				Target.Center = CurrentLocation + (FlowForward * TargetMagnitude); 
+				Target.Center = CurrentLocation + (FlowForward * CurrentMaxSpeed * DeltaTime); 
 				Target.Forward = FlowForward;
 			}
 		}
