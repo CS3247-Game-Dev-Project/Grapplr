@@ -18,7 +18,9 @@ AFlowFieldVolume::AFlowFieldVolume()
     // Create a local line batcher
     // Ensure it doesn't render in the actual game, only the editor
     MyLineBatcher = CreateDefaultSubobject<ULineBatchComponent>(TEXT("LocalLineBatcher"));
+#if WITH_EDITOR
     MyLineBatcher->SetIsVisualizationComponent(true);
+#endif
 }
 
 void AFlowFieldVolume::OnConstruction(const FTransform& Transform)
