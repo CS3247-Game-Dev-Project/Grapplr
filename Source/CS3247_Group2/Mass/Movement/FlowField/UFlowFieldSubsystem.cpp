@@ -86,6 +86,8 @@ FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y) const
 	int32 SafeY = FMath::Clamp(Y, 0, ActiveVolume->TargetAsset->GridDimensions.Y - 1);
     
 	int32 Index = (SafeY * ActiveVolume->TargetAsset->GridDimensions.Y) + SafeX;
+	
+	if (ActiveVolume->TargetAsset->GroundFlowVectors.GetAllocatedSize() < Index) return FVector2D::ZeroVector;
 	return ActiveVolume->TargetAsset->GroundFlowVectors[Index]; // TODO: support separate function for climbing
 }
 
@@ -99,5 +101,6 @@ float UFlowFieldSubsystem::GetRawHeightFromAsset(int32 X, int32 Y) const
 	int32 SafeY = FMath::Clamp(Y, 0, ActiveVolume->TargetAsset->GridDimensions.Y - 1);
     
 	int32 Index = (SafeY * ActiveVolume->TargetAsset->GridDimensions.Y) + SafeX;
+	if (ActiveVolume->TargetAsset->BakedHeights.GetAllocatedSize() < Index) return 0;
 	return ActiveVolume->TargetAsset->BakedHeights[Index]; 
 }
