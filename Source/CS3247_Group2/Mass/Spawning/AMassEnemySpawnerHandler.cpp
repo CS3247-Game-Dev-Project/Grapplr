@@ -50,8 +50,19 @@ FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origi
 
 	// Fallback: If no nav point found, offset slightly so they aren't stacked
 	UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: fall from random point within radius square bounds "));
-	return Origin + FVector(FMath::RandRange(-MaxRadius, MaxRadius),
-										  FMath::RandRange(-MaxRadius, MaxRadius), 1000.f);
+	FVector FinalLocation = Origin;
+	for (int retry = 0; retry < 10; retry++)
+	{
+		FinalLocation= Origin + FVector(FMath::RandRange(-MaxRadius, MaxRadius),
+											  FMath::RandRange(-MaxRadius, MaxRadius), Origin.Z + 3000.f);
+		if ((FinalLocation - Origin).SizeSquared2D() > MinRadius * MinRadius)
+		{
+			return FinalLocation;
+		}
+	}
+	
+	// Just return some location if still failed.
+	return FinalLocation;
 }
 
 void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)

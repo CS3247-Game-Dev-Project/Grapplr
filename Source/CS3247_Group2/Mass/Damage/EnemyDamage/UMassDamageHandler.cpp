@@ -30,6 +30,9 @@ void UMassDamageHandler::ApplyDamageToEntity(const UObject* WorldContextObject, 
 	}
 
 	FMassEntityManager& EntityManager = MassSubsystem->GetMutableEntityManager();
+	if (!EntityManager.IsEntityValid(EntityHandle)) {
+		return;
+	}
 
 	// Update damage fragment
 	if (FDamageAccumulatorFragment* DamageFrag = EntityManager.GetFragmentDataPtr<
