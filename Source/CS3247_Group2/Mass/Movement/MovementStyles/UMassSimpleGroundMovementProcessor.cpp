@@ -79,11 +79,11 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 					{
 						SlidingFlow = FlowForward - (SDFGradient * FlowToWall);
 					}
-					float WallClosenest = (SDF_AVOIDANCE_RADIUS - SDFDistance) / SDF_AVOIDANCE_RADIUS;
-					FVector RepulsionForce = SDFGradient * MovementMagnitude * FMath::Square(WallClosenest);
+					float WallCloseness = (SDF_AVOIDANCE_RADIUS - SDFDistance) / SDF_AVOIDANCE_RADIUS;
+					FVector RepulsionForce = SDFGradient * MovementMagnitude * FMath::Square(WallCloseness);
 								
 					// Ensure flow is flattened to just the ground plane for ground units
-					FlowForward = FMath::Lerp(SlidingFlow.GetSafeNormal2D(), RepulsionForce.GetSafeNormal2D(), WallClosenest).GetSafeNormal2D();
+					FlowForward = FMath::Lerp(SlidingFlow.GetSafeNormal2D(), RepulsionForce.GetSafeNormal2D(), WallCloseness).GetSafeNormal2D();
 				}
 			}
 			

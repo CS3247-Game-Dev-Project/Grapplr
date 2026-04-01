@@ -1,7 +1,7 @@
 ﻿#include "UFlowFieldSubsystem.h"
 #include "AFlowFieldVolume.h"
 
-FVector2D UFlowFieldSubsystem::GetFlowAtLocation(const FVector& Location) const
+FVector2D UFlowFieldSubsystem::GetFlowAtLocation(const FVector& Location, const bool IsGroundFlow) const
 {
 	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return FVector2D::ZeroVector;
@@ -22,10 +22,10 @@ FVector2D UFlowFieldSubsystem::GetFlowAtLocation(const FVector& Location) const
 	float AlphaY = GridY - Y0;
 
 	// Vectors from data asset
-	FVector2D V00 = GetRawVectorFromAsset(X0, Y0);
-	FVector2D V10 = GetRawVectorFromAsset(X1, Y0);
-	FVector2D V01 = GetRawVectorFromAsset(X0, Y1);
-	FVector2D V11 = GetRawVectorFromAsset(X1, Y1);
+	FVector2D V00 = GetRawVectorFromAsset(X0, Y0, IsGroundFlow);
+	FVector2D V10 = GetRawVectorFromAsset(X1, Y0, IsGroundFlow);
+	FVector2D V01 = GetRawVectorFromAsset(X0, Y1, IsGroundFlow);
+	FVector2D V11 = GetRawVectorFromAsset(X1, Y1, IsGroundFlow);
 
 	// Bilinear Interpolation (Lerp X, then Lerp Y)
 	FVector2D LerpBottom = FMath::Lerp(V00, V10, AlphaX);
@@ -76,7 +76,7 @@ FVector2D UFlowFieldSubsystem::ConvertToGridCoords(const FVector& Location) cons
 	return FVector2D(x, y);
 }
 
-FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y) const
+FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y, const bool IsGroundFlow) const
 {
 	WarnIfNoAsset();
 	if (!ActiveVolume || !ActiveVolume->TargetAsset) return FVector2D::ZeroVector;
@@ -87,8 +87,15 @@ FVector2D UFlowFieldSubsystem::GetRawVectorFromAsset(int32 X, int32 Y) const
     
 	int32 Index = (SafeY * ActiveVolume->TargetAsset->GridDimensions.Y) + SafeX;
 	
-	if (ActiveVolume->TargetAsset->GroundFlowVectors.GetAllocatedSize() < Index) return FVector2D::ZeroVector;
-	return ActiveVolume->TargetAsset->GroundFlowVectors[Index]; // TODO: support separate function for climbing
+	if (IsGroundFlow)
+	{
+		if (ActiveVolume->TargetAsset->GroundFlowVectors.GetAllocatedSize() < Index) return FVector2D::ZeroVector;
+		return ActiveVolume->TargetAsset->GroundFlowVectors[Index];
+	} else
+	{
+		if (ActiveVolume->TargetAsset->ClimbFlowVectors.GetAllocatedSize() < Index) return FVector2D::ZeroVector;
+		return ActiveVolume->TargetAsset->ClimbFlowVectors[Index];
+	}
 }
 
 float UFlowFieldSubsystem::GetRawHeightFromAsset(int32 X, int32 Y) const
