@@ -5,7 +5,6 @@
 #include "MassExecutionContext.h"
 #include "MassCommonTypes.h"
 #include "MassMovementFragments.h"
-#include "MassNavigationFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 #include "MovementStyles/UMassSimpleClimberMovementProcessor.h"
 #include "MovementStyles/UMassSimpleFlyerMovementProcessor.h"
@@ -57,6 +56,8 @@ void UMassDriftProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 			auto CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = PlayerLocation - CurrentLocation;
 			
+			if (ToPlayer.Size2D() <= PLAYER_DETECTION_RADIUS) continue;
+			
 			// Calculate Drift: rotate the forward vector slightly based on a sine wave (max 30 deg offset)
 			const float DriftSmoothing = FMath::Clamp((ToPlayer.Size2D() / PLAYER_DETECTION_RADIUS) - 1.f, 0.f, 1.0f);
 			const float SineValue = FMath::Sin((WorldTime + Drift.PhaseOffset) * Drift.DriftFrequency);
@@ -68,10 +69,11 @@ void UMassDriftProcessor::Execute(FMassEntityManager& EntityManager, FMassExecut
 			RotatedFlow.X = Movement.DesiredVelocity.X * CosA - Movement.DesiredVelocity.Y * SinA;
 			RotatedFlow.Y = Movement.DesiredVelocity.X * SinA + Movement.DesiredVelocity.Y * CosA;
 			
-			if (RotatedFlow.IsNearlyZero()) continue;
-			
-			Movement.DesiredVelocity.X = RotatedFlow.X;
-			Movement.DesiredVelocity.Y = RotatedFlow.Y;
+			if (!RotatedFlow.IsNearlyZero())
+			{
+				Movement.DesiredVelocity.X = RotatedFlow.X;
+				Movement.DesiredVelocity.Y = RotatedFlow.Y;
+			}
 		}
 	});
 }

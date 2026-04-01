@@ -1,4 +1,4 @@
-﻿#include "MassEnemyTrait.h"
+﻿#include "UMassEnemyTrait.h"
 #include "MassEntityTemplateRegistry.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"

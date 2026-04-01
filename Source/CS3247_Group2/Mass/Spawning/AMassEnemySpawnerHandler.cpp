@@ -15,6 +15,7 @@
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/EnemyDeath/FEnemyDrops.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
+#include "CS3247_Group2/Mass/Movement/Avoidance/SignedDistanceField/UMassSDFSubsystem.h"
 
 FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origin, const float& MinRadius, const float& MaxRadius)
 {
@@ -74,6 +75,12 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 	{
 		UE_LOG(LogTemp, Error, TEXT("RequestEntitySpawn: called with NaN Location!"));
 		return;
+	}
+	
+	if (UMassSDFSubsystem* SDFSubsystem = GetWorld()->GetSubsystem<UMassSDFSubsystem>())
+	{
+		// Force the subsystem to find the BakeActor right before we spawn
+		SDFSubsystem->EnsureHasCalledPostInitialize();
 	}
 	
 	UEnemyCountSubsystem* EnemyCountSubsystem = World->GetSubsystem<UEnemyCountSubsystem>();

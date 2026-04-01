@@ -10,6 +10,7 @@
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
+#include "CS3247_Group2/Mass/Movement/Avoidance/SignedDistanceField/UMassSDFSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/FlowField/UFlowFieldSubsystem.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
@@ -44,11 +45,13 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 	float DeltaTime = Context.GetDeltaTimeSeconds();
 	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
 	UFlowFieldSubsystem* FlowFieldSubsystem = GetWorld()->GetSubsystem<UFlowFieldSubsystem>();
+	UMassSDFSubsystem* SDFSubsystem = GetWorld()->GetSubsystem<UMassSDFSubsystem>();
 	
 	const float MIN_HEIGHT_ABOVE = 3000.f;
 	const float CLOSE_TO_PLAYER = 2000.f;
 	const float VERY_CLOSE_TO_PLAYER = 500.f;
 	const float HEIGHT_DRIFT_MAGNITUDE = 2.0f;
+	constexpr float SDF_AVOIDANCE_RADIUS = 150.0f;
 	
 	float WorldTime = GetWorld()->GetTimeSeconds();
 
@@ -64,7 +67,7 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 		{
 			FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = PlayerLocation - CurrentLocation;
-			float CurrentMaxSpeed = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
+			float MovementMagnitude = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
 			
 			// Use Present/Future terrain height
 			float MaxTerrainHeight = FMath::Max(
@@ -86,8 +89,30 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 				DesiredZ = FMath::Max(PlayerLocation.Z, MaxTerrainHeight) + AdditionalHeight;
 			}
 			
+			FVector ForwardVector = ToPlayer.GetSafeNormal();
+			
+			// Use signed distance field to adjust the forward flow, to avoid wall clipping
+			if (SDFSubsystem && SDFSubsystem->HasTargetAsset())
+			{
+				float SDFDistance = SDFSubsystem->GetDistanceAtWorldPosition(CurrentLocation);
+				if (SDFDistance < SDF_AVOIDANCE_RADIUS)
+				{
+					FVector SDFGradient = SDFSubsystem->GetGradientAtWorldPosition(CurrentLocation).GetSafeNormal();
+					float FlowToWall = FVector::DotProduct(ForwardVector, SDFGradient);
+					FVector SlidingFlow = FVector::ZeroVector;
+					if (FlowToWall < 0)
+					{
+						SlidingFlow = ForwardVector - (SDFGradient * FlowToWall);
+					}
+					float WallClosenest = (SDF_AVOIDANCE_RADIUS - SDFDistance) / SDF_AVOIDANCE_RADIUS;
+					FVector RepulsionForce = SDFGradient * MovementMagnitude * FMath::Square(WallClosenest);
+					
+					ForwardVector = FMath::Lerp(SlidingFlow.GetSafeNormal(), RepulsionForce.GetSafeNormal(), WallClosenest).GetSafeNormal();
+				}
+			}
+			
 			// Calculate Steering Logic
-			FVector DesiredVelocity = ToPlayer.GetSafeNormal() * CurrentMaxSpeed;
+			FVector DesiredVelocity = ForwardVector * MovementMagnitude;
 			DesiredVelocity.Z = (DesiredZ - CurrentLocation.Z) * HEIGHT_DRIFT_MAGNITUDE;
 			
 			// Apply Smooth Interpolation for velocity.

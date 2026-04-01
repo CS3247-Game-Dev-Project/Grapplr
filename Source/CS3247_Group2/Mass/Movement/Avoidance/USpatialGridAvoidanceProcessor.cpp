@@ -3,11 +3,9 @@
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
 #include "MassMovementFragments.h"
-#include "MassNavigationFragments.h"
 #include "UMassSpatialGridSubsystem.h"
 #include "USpatialGridUpdateProcessor.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
-#include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 #include "Steering/MassSteeringProcessors.h"
 
 USpatialGridAvoidanceProcessor::USpatialGridAvoidanceProcessor() : EntityQuery(*this)
@@ -26,9 +24,8 @@ USpatialGridAvoidanceProcessor::USpatialGridAvoidanceProcessor() : EntityQuery(*
 
 void USpatialGridAvoidanceProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>& EntityManager)
 {
-	EntityQuery.AddRequirement<FMassMoveTargetFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FMassDesiredMovementFragment>(EMassFragmentAccess::ReadWrite);
-	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite);
+	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FSpatialGridAvoidanceFragment>(EMassFragmentAccess::ReadOnly);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
@@ -41,22 +38,21 @@ void USpatialGridAvoidanceProcessor::Execute(FMassEntityManager& EntityManager, 
     auto SpatialGridSubsystem = GetWorld()->GetSubsystem<UMassSpatialGridSubsystem>();
     const float DeltaTime = Context.GetDeltaTimeSeconds();
 
+	// constexpr float INTERPOLATION_SPEED = 10.0f;
     const float AVOIDANCE_STRENGTH = 2.0f;
     const float AVOIDANCE_WEIGHT = 0.9f;
     const float PERSONAL_SPACE = 0.f;
 
     EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
     {
-    	const auto Targets = IterContext.GetMutableFragmentView<FMassMoveTargetFragment>();
-		const auto Transforms = IterContext.GetMutableFragmentView<FTransformFragment>();
 		const auto Movements = IterContext.GetMutableFragmentView<FMassDesiredMovementFragment>();
+		const auto Transforms = IterContext.GetFragmentView<FTransformFragment>();
 		const auto Avoidances = IterContext.GetFragmentView<FSpatialGridAvoidanceFragment>();
         
         for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
         {
         	int32 CurrentIdx = IterContext.GetEntity(i).Index;
             FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
-        	auto& Target = Targets[i];
             float Radius = Avoidances[i].AvoidanceSpaceRadius;
         	float MovementMagnitude = Movements[i].DesiredVelocity.Size();
             
@@ -89,15 +85,10 @@ void USpatialGridAvoidanceProcessor::Execute(FMassEntityManager& EntityManager, 
             }
 
         	// Apply separation force to the target movement
-        	Movements[i].DesiredVelocity = FMath::Lerp(Movements[i].DesiredVelocity, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
-        	Movements[i].DesiredVelocity = Movements[i].DesiredVelocity.GetSafeNormal() * MovementMagnitude;
-        	
-        	// UNUSED: changing the forward changes the direction which the enemy faces.
-            // Target.Forward = FMath::Lerp(Target.Forward, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
-        	
-        	// Secondary update to location, in case target movement force applications are reordered in the processor pipeline,
-        	// resulting in the separation force not being applied.
-        	// Transforms[i].GetMutableTransform().SetTranslation(CurrentLocation + Target.Forward * 0.001f);
+        	FVector AvoidanceDirection = FMath::Lerp(Movements[i].DesiredVelocity, TotalSeparation * DeltaTime, AVOIDANCE_WEIGHT);
+        	Movements[i].DesiredVelocity = AvoidanceDirection.GetSafeNormal() * MovementMagnitude;
+        	// Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, 
+        	// 	AvoidanceDirection.GetSafeNormal() * MovementMagnitude, DeltaTime, INTERPOLATION_SPEED);
         }
     });
 }
