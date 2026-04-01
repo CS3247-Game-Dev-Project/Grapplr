@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "MassEntityTraitBase.h"
-#include "MassEnemyTrait.generated.h"
+#include "UMassEnemyTrait.generated.h"
 
 UCLASS()
 class CS3247_GROUP2_API UMassEnemyTrait : public UMassEntityTraitBase

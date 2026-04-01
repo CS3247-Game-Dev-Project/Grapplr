@@ -15,6 +15,7 @@ public class CS3247_Group2 : ModuleRules
 			"Engine", 
 			"InputCore", 
 			
+			// Mass Entity related
 			"MassEntity", 
 			"MassCommon", 
 			"MassMovement", 
@@ -31,6 +32,15 @@ public class CS3247_Group2 : ModuleRules
 			
 			"NavigationSystem",
 			"Niagara",
+			
+			// For baking the signed distance fields
+			"GeometryScriptingCore",
+			"GeometryFramework",
+			"GeometryFlowCore",
+			"GeometryCore",
+			"GeometryFlowMeshProcessing",
+			"DynamicMesh",
+			"MeshDescription"
 		});
 
 		// Uncomment if you are using Slate UI

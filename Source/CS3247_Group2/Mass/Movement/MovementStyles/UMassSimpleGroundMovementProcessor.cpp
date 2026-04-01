@@ -8,6 +8,7 @@
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
+#include "CS3247_Group2/Mass/Movement/Avoidance/SignedDistanceField/UMassSDFSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/FlowField/UFlowFieldSubsystem.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
@@ -39,9 +40,13 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 	const UEnemyMovementSubsystem* GlobalManager = GetWorld()->GetSubsystem<UEnemyMovementSubsystem>();
 	float GlobalMovementSpeedMult = GlobalManager ? GlobalManager->GlobalMovementSpeedMultiplier : 1.0f;
 	UFlowFieldSubsystem* FlowFieldSubsystem = GetWorld()->GetSubsystem<UFlowFieldSubsystem>();
-	constexpr float CLOSE_TO_PLAYER = 500.f;
 	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
 	float DeltaTime = Context.GetDeltaTimeSeconds();
+	UMassSDFSubsystem* SDFSubsystem = GetWorld()->GetSubsystem<UMassSDFSubsystem>();
+	
+	constexpr float CLOSE_TO_PLAYER = 500.f;
+	constexpr float SDF_AVOIDANCE_RADIUS = 150.0f;
+	constexpr float INTERPOLATION_SPEED = 3.0f;
 
 	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
@@ -55,23 +60,45 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 			auto& Target = Targets[i];
 			FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = (PlayerLocation - CurrentLocation);
-			float CurrentMaxSpeed = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
+			float MovementMagnitude = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
 			
 			// Get our smoothed flow direction from the subsystem
 			const FVector2D FlowDir2D = FlowFieldSubsystem->GetFlowAtLocation(CurrentLocation);
 			FVector FlowForward = FVector(FlowDir2D.X, FlowDir2D.Y, 0.0f).GetSafeNormal();
-			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * CurrentMaxSpeed, DeltaTime, 3.0f);
+			
+			// Use signed distance field to adjust the forward flow, to avoid wall clipping
+			if (SDFSubsystem && SDFSubsystem->HasTargetAsset())
+			{
+				float SDFDistance = SDFSubsystem->GetDistanceAtWorldPosition(CurrentLocation);
+				if (SDFDistance < SDF_AVOIDANCE_RADIUS)
+				{
+					FVector SDFGradient = SDFSubsystem->GetGradientAtWorldPosition(CurrentLocation).GetSafeNormal2D();
+					float FlowToWall = FVector::DotProduct(FlowForward, SDFGradient);
+					FVector SlidingFlow = FVector::ZeroVector;
+					if (FlowToWall < 0)
+					{
+						SlidingFlow = FlowForward - (SDFGradient * FlowToWall);
+					}
+					float WallClosenest = (SDF_AVOIDANCE_RADIUS - SDFDistance) / SDF_AVOIDANCE_RADIUS;
+					FVector RepulsionForce = SDFGradient * MovementMagnitude * FMath::Square(WallClosenest);
+								
+					// Ensure flow is flattened to just the ground plane for ground units
+					FlowForward = FMath::Lerp(SlidingFlow.GetSafeNormal2D(), RepulsionForce.GetSafeNormal2D(), WallClosenest).GetSafeNormal2D();
+				}
+			}
+			
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, INTERPOLATION_SPEED);
 			
 			// Point at a spot in the direction the flow field wants us to go
 			Target.DistanceToGoal = ToPlayer.Size();
 			Target.IntentAtGoal = EMassMovementAction::Move;
 			if (FlowForward.IsNearlyZero() || ToPlayer.Size() <= CLOSE_TO_PLAYER)
 			{
-				Target.Forward = ToPlayer.GetSafeNormal2D();	
-				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * CurrentMaxSpeed * DeltaTime);
+				Target.Forward = ToPlayer.GetSafeNormal2D();
+				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * MovementMagnitude * DeltaTime);
 			} else
 			{
-				Target.Center = CurrentLocation + (FlowForward * CurrentMaxSpeed * DeltaTime); 
+				Target.Center = CurrentLocation + (FlowForward * MovementMagnitude * DeltaTime); 
 				Target.Forward = FlowForward;
 			}
 		}
