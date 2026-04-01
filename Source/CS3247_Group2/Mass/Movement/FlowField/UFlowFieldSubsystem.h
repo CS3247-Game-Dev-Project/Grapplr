@@ -23,7 +23,7 @@ public:
 		}
 	}
 	
-	FVector2D GetFlowAtLocation(const FVector& Location) const;
+	FVector2D GetFlowAtLocation(const FVector& Location, const bool IsGroundFlow = true) const;
 	
 	float GetCellSize() const
 	{
@@ -37,7 +37,7 @@ public:
 		ActiveVolume = Volume;
 	}
 	
-	FVector2D GetRawVectorFromAsset(int32 X, int32 Y) const;
+	FVector2D GetRawVectorFromAsset(int32 X, int32 Y, const bool IsGroundFlow = true) const;
 	float GetRawHeightFromAsset(int32 X, int32 Y) const;
 	
 	/** Checks if the location is near an edge (with height difference) */

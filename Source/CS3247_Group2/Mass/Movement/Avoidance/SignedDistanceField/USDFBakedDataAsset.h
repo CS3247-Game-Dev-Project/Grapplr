@@ -23,8 +23,9 @@ public:
 	
 	FVector IndexToWorld(int32 Index) const;
 	int32 WorldToIndex(const FVector& WorldPos) const;
-	float GetDistanceAtWorldPosition(const FVector& WorldPos);
-	FVector GetGradientAtWorldPosition(const FVector& WorldPos);
+	FVector WorldToGrid(const FVector& WorldPos) const;
+	float GetDistanceAtWorldPosition(const FVector& WorldPos) const;
+	FVector GetGradientAtWorldPosition(const FVector& WorldPos) const;
 };
 
 /** Converts a 1D Array Index back into a 3D World Position (Voxel Center)
@@ -33,16 +34,13 @@ inline FVector USDFBakedDataAsset::IndexToWorld(int32 Index) const
 {
 	if (!DistanceData.IsValidIndex(Index)) return FVector::ZeroVector;
 
-	// 1. Reverse the flattening math
 	int32 Z = Index / (GridDims.X * GridDims.Y);
 	int32 Remainder = Index % (GridDims.X * GridDims.Y);
 	int32 Y = Remainder / GridDims.X;
 	int32 X = Remainder % GridDims.X;
 
-	// 2. Map Grid Coordinates to World Space
-	// We add 0.5 to the coordinates to get the CENTER of the voxel
+	// Center offset (+0.5f) ensures we return the middle of the voxel
 	FVector LocalPos = FVector(X + 0.5f, Y + 0.5f, Z + 0.5f) * VoxelSize;
-    
 	return WorldBounds.Min + LocalPos;
 }
 
@@ -52,55 +50,85 @@ inline int32 USDFBakedDataAsset::WorldToIndex(const FVector& WorldPos) const
 {
 	if (!WorldBounds.IsInside(WorldPos)) return INDEX_NONE;
 
-	// 1. Calculate Local Grid Coordinates
 	FVector RelativePos = (WorldPos - WorldBounds.Min) / VoxelSize;
-    
 	int32 X = FMath::FloorToInt(RelativePos.X);
 	int32 Y = FMath::FloorToInt(RelativePos.Y);
 	int32 Z = FMath::FloorToInt(RelativePos.Z);
 
-	// 2. Bounds Check
 	if (X < 0 || X >= GridDims.X || Y < 0 || Y >= GridDims.Y || Z < 0 || Z >= GridDims.Z)
 	{
 		return INDEX_NONE;
 	}
 
-	// 3. Flatten to 1D
 	return X + (Y * GridDims.X) + (Z * GridDims.X * GridDims.Y);
 }
 
-inline float USDFBakedDataAsset::GetDistanceAtWorldPosition(const FVector& WorldPos)
+/** Returns the continuous grid coordinates (e.g., 10.5, 5.2, 0.1) 
+ * This allows you to get both the Base Index and the Lerp Alphas in one go.
+ */
+inline FVector USDFBakedDataAsset::WorldToGrid(const FVector& WorldPos) const
+{
+	return (WorldPos - WorldBounds.Min) / VoxelSize;
+}
+
+inline float USDFBakedDataAsset::GetDistanceAtWorldPosition(const FVector& WorldPos) const
 {
 	if (DistanceData.Num() == 0) return 10000.0f;
 
-	// Convert World Position to Local Grid Space
-	FVector LocalPos = (WorldPos - WorldBounds.Min) / VoxelSize;
-        
-	// Get the integer "Base" voxel (the bottom-left-back corner)
-	FIntVector Base;
-	Base.X = FMath::FloorToInt(LocalPos.X - 0.5f);
-	Base.Y = FMath::FloorToInt(LocalPos.Y - 0.5f);
-	Base.Z = FMath::FloorToInt(LocalPos.Z - 0.5f);
+	FVector LocalPos = WorldToGrid(WorldPos);
+    
+	int32 X0 = FMath::FloorToInt(LocalPos.X);
+	int32 Y0 = FMath::FloorToInt(LocalPos.Y);
+	int32 Z0 = FMath::FloorToInt(LocalPos.Z);
 
-	// For a quick & dirty version, just return the nearest:
-	// (For a production version, you'd use FMath::Lerp between 8 samples)
-	auto GetVal = [&](int32 x, int32 y, int32 z) -> float {
-		x = FMath::Clamp(x, 0, GridDims.X - 1);
-		y = FMath::Clamp(y, 0, GridDims.Y - 1);
-		z = FMath::Clamp(z, 0, GridDims.Z - 1);
-		return DistanceData[x + (y * GridDims.X) + (z * GridDims.X * GridDims.Y)];
+	float AlphaX = LocalPos.X - X0;
+	float AlphaY = LocalPos.Y - Y0;
+	float AlphaZ = LocalPos.Z - Z0;
+
+	int32 X1 = FMath::Clamp(X0 + 1, 0, GridDims.X - 1);
+	int32 Y1 = FMath::Clamp(Y0 + 1, 0, GridDims.Y - 1);
+	int32 Z1 = FMath::Clamp(Z0 + 1, 0, GridDims.Z - 1);
+    
+	X0 = FMath::Clamp(X0, 0, GridDims.X - 1);
+	Y0 = FMath::Clamp(Y0, 0, GridDims.Y - 1);
+	Z0 = FMath::Clamp(Z0, 0, GridDims.Z - 1);
+
+	const int32 DimX = GridDims.X;
+	const int32 DimXY = GridDims.X * GridDims.Y;
+
+	auto GetVal = [&](int32 x, int32 y, int32 z) {
+		return DistanceData[x + (y * DimX) + (z * DimXY)];
 	};
 
-	return GetVal(Base.X, Base.Y, Base.Z);
+	// Trilinear interpolation.
+	// Layer 0
+	float V000 = GetVal(X0, Y0, Z0);
+	float V100 = GetVal(X1, Y0, Z0);
+	float V010 = GetVal(X0, Y1, Z0);
+	float V110 = GetVal(X1, Y1, Z0);
+
+	// Layer 1
+	float V001 = GetVal(X0, Y0, Z1);
+	float V101 = GetVal(X1, Y0, Z1);
+	float V011 = GetVal(X0, Y1, Z1);
+	float V111 = GetVal(X1, Y1, Z1);
+
+	return FMath::Lerp(
+		FMath::Lerp(FMath::Lerp(V000, V100, AlphaX), FMath::Lerp(V010, V110, AlphaX), AlphaY),
+		FMath::Lerp(FMath::Lerp(V001, V101, AlphaX), FMath::Lerp(V011, V111, AlphaX), AlphaY),
+		AlphaZ
+	);
 }
 
-inline FVector USDFBakedDataAsset::GetGradientAtWorldPosition(const FVector& WorldPos)
+inline FVector USDFBakedDataAsset::GetGradientAtWorldPosition(const FVector& WorldPos) const
 {
-	float V = VoxelSize;
-	// Central Difference Method: sample Left/Right, Up/Down, Forward/Back
-	float DX = GetDistanceAtWorldPosition(WorldPos + FVector(V, 0, 0)) - GetDistanceAtWorldPosition(WorldPos - FVector(V, 0, 0));
-	float DY = GetDistanceAtWorldPosition(WorldPos + FVector(0, V, 0)) - GetDistanceAtWorldPosition(WorldPos - FVector(0, V, 0));
-	float DZ = GetDistanceAtWorldPosition(WorldPos + FVector(0, 0, V)) - GetDistanceAtWorldPosition(WorldPos - FVector(0, 0, V));
-    
+	// High-performance Gradient Calculation using Central Difference
+	// We use a small epsilon relative to voxel size for accuracy
+	const float Epsilon = VoxelSize * 0.1f;
+
+	float DX = GetDistanceAtWorldPosition(WorldPos + FVector(Epsilon, 0, 0)) - GetDistanceAtWorldPosition(WorldPos - FVector(Epsilon, 0, 0));
+	float DY = GetDistanceAtWorldPosition(WorldPos + FVector(0, Epsilon, 0)) - GetDistanceAtWorldPosition(WorldPos - FVector(0, Epsilon, 0));
+	float DZ = GetDistanceAtWorldPosition(WorldPos + FVector(0, 0, Epsilon)) - GetDistanceAtWorldPosition(WorldPos - FVector(0, 0, Epsilon));
+
 	return FVector(DX, DY, DZ).GetSafeNormal();
 }
