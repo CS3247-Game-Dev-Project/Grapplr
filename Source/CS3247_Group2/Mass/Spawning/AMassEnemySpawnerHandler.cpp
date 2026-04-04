@@ -83,6 +83,12 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 		SDFSubsystem->EnsureHasCalledPostInitialize();
 	}
 	
+	// Overwrite the default spawn count if any.
+	if (EnemyWaveStats.OverwriteSpawnCount >= 0)
+	{
+		NumToSpawn = EnemyWaveStats.OverwriteSpawnCount;
+	}
+	
 	UEnemyCountSubsystem* EnemyCountSubsystem = World->GetSubsystem<UEnemyCountSubsystem>();
 	if (!EnemyCountSubsystem || EnemyCountSubsystem->EnemyCount + NumToSpawn >= ActiveEnemyLimit)
 	{

@@ -46,6 +46,10 @@ struct CS3247_GROUP2_API FEnemyWaveStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int ExperienceDrop = 1;
 	
+	/** Overwrites the default number of enemies to spawn in that wave. If -1 then no overwrite */ 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int OverwriteSpawnCount = -1;
+	
 	/** Entity Config template asset */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TSoftObjectPtr<UMassEntityConfigAsset> EntityConfig;
