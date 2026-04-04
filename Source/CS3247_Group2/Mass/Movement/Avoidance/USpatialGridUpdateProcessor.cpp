@@ -3,6 +3,7 @@
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
 #include "UMassSpatialGridSubsystem.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
@@ -19,7 +20,8 @@ void USpatialGridUpdateProcessor::ConfigureQueries(const TSharedRef<FMassEntityM
 {
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FSpatialGridAvoidanceFragment>(EMassFragmentAccess::None);
-
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
+	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
 
@@ -36,7 +38,7 @@ void USpatialGridUpdateProcessor::Execute(FMassEntityManager& EntityManager, FMa
 	bShowDebug = CVarShowMassSpatialGrid.GetValueOnAnyThread() > 0;
 #endif
 	
-	// Include player in avoidance calculations (can be toggled)
+	// Include player in avoidance calculations (hardcoded but can be toggled)
 	// const auto PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
 	// const int32 PlayerGridIdx = UMassSpatialGridSubsystem::GetGridIndex(PlayerLocation);
 	// SpatialGridSubsystem->EntityLocations[UMassSpatialGridSubsystem::PLAYER_INDEX] = PlayerLocation;

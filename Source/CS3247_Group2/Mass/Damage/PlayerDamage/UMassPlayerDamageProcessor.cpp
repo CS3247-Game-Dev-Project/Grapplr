@@ -7,6 +7,9 @@
 
 #include <atomic>
 
+#include "MassSignalSubsystem.h"
+#include "CS3247_Group2/Mass/StateTree/UMassEnemyStateTreeProcessor.h"
+
 UMassPlayerDamageProcessor::UMassPlayerDamageProcessor() : EntityQuery(*this)
 {
 	bAutoRegisterWithProcessingPhases = true;
@@ -27,11 +30,12 @@ void UMassPlayerDamageProcessor::ConfigureQueries(const TSharedRef<FMassEntityMa
 void UMassPlayerDamageProcessor::Execute(FMassEntityManager& EntityManager, FMassExecutionContext& Context)
 {
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
-
+	
 	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
+	UMassSignalSubsystem* SignalSubsystem = UWorld::GetSubsystem<UMassSignalSubsystem>(GetWorld());
 	std::atomic<float> TotalDamage = 0.0f;
 	
-	EntityQuery.ForEachEntityChunk(Context, [PlayerLocation, &TotalDamage](const FMassExecutionContext& IterContext)
+	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
 		const auto Damages = IterContext.GetFragmentView<FDamageFragment>();
 		const auto Transforms = IterContext.GetFragmentView<FTransformFragment>();
@@ -41,8 +45,18 @@ void UMassPlayerDamageProcessor::Execute(FMassEntityManager& EntityManager, FMas
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
 			// Optimization: Use DistSquared to avoid expensive Square Root
-			const float DistSq = FVector::DistSquared(PlayerLocation, Transforms[i].GetTransform().GetLocation()); 
-			if (DistSq <= FMath::Square(Damages[i].AttackRange)) ChunkDamage += Damages[i].Damage;
+			const float DistSq = FVector::DistSquared(PlayerLocation, Transforms[i].GetTransform().GetLocation());
+			if (bool bInAttackRange = DistSq <= FMath::Square(Damages[i].AttackRange))
+			{
+				ChunkDamage += Damages[i].Damage;
+				if (!Damages[i].bIsAttacking)
+				{
+					SignalSubsystem->SignalEntityDeferred(IterContext, MassEnemyStateTree::Signals::EnemyAttackInRange, IterContext.GetEntity(i));
+				}
+			} else if (Damages[i].bIsAttacking)
+			{
+				SignalSubsystem->SignalEntityDeferred(IterContext, MassEnemyStateTree::Signals::EnemyAttackOutOfRange, IterContext.GetEntity(i));
+			}
 		}
 		
 		TotalDamage += ChunkDamage;
@@ -59,6 +73,5 @@ void UMassPlayerDamageProcessor::Execute(FMassEntityManager& EntityManager, FMas
 				Subsystem->AddPlayerDamage(Dmg);
 			}
 		});
-
 	}
 }

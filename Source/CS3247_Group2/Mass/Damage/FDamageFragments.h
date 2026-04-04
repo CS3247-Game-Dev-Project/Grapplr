@@ -10,6 +10,7 @@ struct CS3247_GROUP2_API FDamageFragment : public FMassFragment
 	GENERATED_BODY()
 	float Damage = 0.0f;
 	float AttackRange = 150.f;
+	bool bIsAttacking = false;
 };
 
 USTRUCT()

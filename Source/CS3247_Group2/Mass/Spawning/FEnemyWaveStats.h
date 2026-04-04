@@ -18,6 +18,10 @@ struct CS3247_GROUP2_API FEnemyWaveStats
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Speed = 400.f;
 	
+	/** Velocity interpolation speed of the enemy's desired velocity */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float InterpolationSpeed = 3.f;
+	
 	/** DPS (multiplied by delta time) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Damage = 10.f;

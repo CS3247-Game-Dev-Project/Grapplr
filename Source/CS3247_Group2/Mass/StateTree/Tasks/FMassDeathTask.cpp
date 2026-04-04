@@ -1,0 +1,46 @@
+﻿#include "FMassDeathTask.h"
+#include "MassStateTreeExecutionContext.h"
+#include "StateTreeLinker.h"
+#include "CS3247_Group2/Mass/Animations/UMassAnimationComponent.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
+#include "CS3247_Group2/Mass/StateTree/UMassEnemyStateTreeProcessor.h"
+
+bool FMassDeathTask::Link(FStateTreeLinker& Linker)
+{
+	Linker.LinkExternalData(ActorHandle);
+	return true;
+}
+
+EStateTreeRunStatus FMassDeathTask::EnterState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
+{
+	if (!Context.AreContextDataViewsValid()) return EStateTreeRunStatus::Failed;
+	
+	const FMassStateTreeExecutionContext& MassContext = static_cast<FMassStateTreeExecutionContext&>(Context);
+	const FMassEntityManager& EntityManager = MassContext.GetEntityManager();
+	EntityManager.Defer().AddTag<FDeadTag>(MassContext.GetEntity());
+
+	const FMassActorFragment& ActorFragment = Context.GetExternalData(ActorHandle);
+	if (const AActor* Actor = ActorFragment.Get())
+	{
+		if (UMassAnimationComponent* AnimComp = Actor->FindComponentByClass<UMassAnimationComponent>())
+		{
+			AnimComp->CurrentAnimState = EEnemyAnimationState::Death;
+		}
+	}
+
+	return FMassStateTreeTaskBase::EnterState(Context, Transition);
+}
+
+EStateTreeRunStatus FMassDeathTask::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
+{
+	if (!Context.AreContextDataViewsValid()) return EStateTreeRunStatus::Failed;
+	
+	return FMassStateTreeTaskBase::Tick(Context, DeltaTime);
+}
+
+void FMassDeathTask::ExitState(FStateTreeExecutionContext& Context, const FStateTreeTransitionResult& Transition) const
+{
+	if (!Context.AreContextDataViewsValid()) return;
+
+	return FMassStateTreeTaskBase::ExitState(Context, Transition);
+}

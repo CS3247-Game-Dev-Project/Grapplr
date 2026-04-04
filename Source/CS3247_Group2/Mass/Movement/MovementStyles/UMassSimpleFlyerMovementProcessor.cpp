@@ -7,6 +7,7 @@
 #include "MassEntityQuery.h"
 #include "MassExecutionContext.h"
 #include "MassMovementFragments.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
@@ -32,6 +33,7 @@ void UMassSimpleFlyerMovementProcessor::ConfigureQueries(const TSharedRef<FMassE
 	EntityQuery.AddRequirement<FMovementSpeedFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FSimpleFlyerConfigFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddTagRequirement<FSimpleFlyerMovementTag>(EMassFragmentPresence::All);
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
@@ -116,7 +118,7 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 			DesiredVelocity.Z = (DesiredZ - CurrentLocation.Z) * HEIGHT_DRIFT_MAGNITUDE;
 			
 			// Apply Smooth Interpolation for velocity.
-			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, DesiredVelocity, DeltaTime, 3.0f);
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, DesiredVelocity, DeltaTime, Speeds[i].VelocityInterpolationSpeed);
 			Target.Forward = Movements[i].DesiredVelocity.GetSafeNormal();
 			Target.Center = CurrentLocation + Movements[i].DesiredVelocity * DeltaTime;
 		}

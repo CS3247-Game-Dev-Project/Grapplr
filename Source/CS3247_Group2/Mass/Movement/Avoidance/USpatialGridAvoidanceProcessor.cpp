@@ -5,6 +5,7 @@
 #include "MassMovementFragments.h"
 #include "UMassSpatialGridSubsystem.h"
 #include "USpatialGridUpdateProcessor.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "Steering/MassSteeringProcessors.h"
 
@@ -27,6 +28,7 @@ void USpatialGridAvoidanceProcessor::ConfigureQueries(const TSharedRef<FMassEnti
 	EntityQuery.AddRequirement<FMassDesiredMovementFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FSpatialGridAvoidanceFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }

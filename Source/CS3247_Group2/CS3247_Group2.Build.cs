@@ -27,9 +27,11 @@ public class CS3247_Group2 : ModuleRules
 			"MassNavMeshNavigation",
 			"MassSignals",
 			
+			// State tree
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			
+			// Experimental
 			"NavigationSystem",
 			"Niagara",
 			

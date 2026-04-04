@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "MassCommonFragments.h"
 #include "MassMovementFragments.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
@@ -32,6 +33,7 @@ void UMassSimpleClimberMovementProcessor::ConfigureQueries(const TSharedRef<FMas
 	EntityQuery.AddRequirement<FMovementSpeedFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FHeightFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddTagRequirement<FSimpleClimberMovementTag>(EMassFragmentPresence::All);
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
@@ -51,7 +53,6 @@ void UMassSimpleClimberMovementProcessor::Execute(FMassEntityManager& EntityMana
 	constexpr float SDF_AVOIDANCE_RADIUS = 50.0f;
 	constexpr float CLIMB_DISTANCE = 100.0f;
 	constexpr float CLIMB_MULTIPLIER = 10.0f;
-	constexpr float INTERPOLATION_SPEED = 3.0f;
 
 	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
@@ -116,7 +117,7 @@ void UMassSimpleClimberMovementProcessor::Execute(FMassEntityManager& EntityMana
 			}
 			
 			// Update direction
-			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, INTERPOLATION_SPEED);
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, Speeds[i].VelocityInterpolationSpeed);
 		
 			// Target/desire is different if currently climbing, we don't consider sdf repulsion forces.
 			if (bIsCurrentlyClimbing) return;

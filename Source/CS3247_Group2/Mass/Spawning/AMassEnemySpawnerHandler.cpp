@@ -168,7 +168,7 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 					if (FMovementSpeedFragment *MovementSpeedFragment = InEntityManager.GetFragmentDataPtr<FMovementSpeedFragment>(Entity))
 					{
 						MovementSpeedFragment->MaxMovementSpeed = EnemyWaveStats.Speed;
-						MovementSpeedFragment->MaxAcceleration = EnemyWaveStats.Speed * 1.5; // UNUSED: acceleration is difficult to manipulate.
+						MovementSpeedFragment->VelocityInterpolationSpeed = EnemyWaveStats.InterpolationSpeed;
 					}
 					if (FMassDesiredMovementFragment *MovementFragment = InEntityManager.GetFragmentDataPtr<FMassDesiredMovementFragment>(Entity))
 					{

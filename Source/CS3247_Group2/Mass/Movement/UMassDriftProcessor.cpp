@@ -5,6 +5,7 @@
 #include "MassExecutionContext.h"
 #include "MassCommonTypes.h"
 #include "MassMovementFragments.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 #include "MovementStyles/UMassSimpleClimberMovementProcessor.h"
 #include "MovementStyles/UMassSimpleFlyerMovementProcessor.h"
@@ -30,6 +31,7 @@ void UMassDriftProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager>&
 	EntityQuery.AddRequirement<FMassDesiredMovementFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FMassDriftFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
 	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }

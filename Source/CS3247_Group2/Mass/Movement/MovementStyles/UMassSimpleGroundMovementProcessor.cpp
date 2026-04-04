@@ -5,6 +5,7 @@
 #include "MassMovementFragments.h"
 #include "MassNavigationFragments.h"
 #include "MassSignalSubsystem.h"
+#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
@@ -29,6 +30,7 @@ void UMassSimpleGroundMovementProcessor::ConfigureQueries(const TSharedRef<FMass
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FMovementSpeedFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddTagRequirement<FSimpleGroundMovementTag>(EMassFragmentPresence::All);
+	EntityQuery.AddTagRequirement<FDeadTag>(EMassFragmentPresence::None);
 	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
@@ -46,7 +48,6 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 	
 	constexpr float CLOSE_TO_PLAYER = 500.f;
 	constexpr float SDF_AVOIDANCE_RADIUS = 150.0f;
-	constexpr float INTERPOLATION_SPEED = 3.0f;
 
 	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
@@ -87,7 +88,7 @@ void UMassSimpleGroundMovementProcessor::Execute(FMassEntityManager& EntityManag
 				}
 			}
 			
-			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, INTERPOLATION_SPEED);
+			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, Speeds[i].VelocityInterpolationSpeed);
 			
 			// Point at a spot in the direction the flow field wants us to go
 			Target.DistanceToGoal = ToPlayer.Size();

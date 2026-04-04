@@ -12,8 +12,7 @@ struct CS3247_GROUP2_API FMovementSpeedFragment : public FMassFragment
 	/** The "clamp" to the movement velocity. */
 	float MaxMovementSpeed = 200.f;
 	
-	/** UNUSED: should be more than movement speed for reasonable steering */
-	float MaxAcceleration = 250.f;
+	float VelocityInterpolationSpeed = 3.f;
 };
 
 /**

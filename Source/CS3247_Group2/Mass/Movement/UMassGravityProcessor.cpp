@@ -22,7 +22,7 @@ void UMassGravityProcessor::ConfigureQueries(const TSharedRef<FMassEntityManager
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadWrite); 
 	EntityQuery.AddRequirement<FHeightFragment>(EMassFragmentAccess::ReadOnly);
 	EntityQuery.AddRequirement<FExpDropFragment>(EMassFragmentAccess::None, EMassFragmentPresence::None); // Only apply to enemies
-	EntityQuery.AddTagRequirement<FGravityTag>(EMassFragmentPresence::All); // TODO: remove gravity tag since it is unused.
+	EntityQuery.AddTagRequirement<FGravityTag>(EMassFragmentPresence::All);
 	
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
