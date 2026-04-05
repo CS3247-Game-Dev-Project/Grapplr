@@ -8,6 +8,7 @@
 #include "MassSpawnerTypes.h"
 #include "MassSpawnLocationProcessor.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
+#include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 #include "CS3247_Group2/Mass/Spawning/UEnemyCountSubsystem.h"
 #include "CS3247_Group2/Mass/StateTree/UMassEnemyStateTreeProcessor.h"
@@ -109,14 +110,22 @@ void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<i
 		}
 
 		const FMassEntityTemplate& EntityTemplate = LoadedConfig->GetOrCreateEntityTemplate(*World);
-
+			
+		// Base exp amount is treated as 0.
+		const float MAX_EXP_AMT = 100.f;
+		const float BASE_EXP_SIZE = 0.1f;
+		const float MAX_EXP_SIZE = 0.2f;
+			
 		// Handle Transforms (Standard Mass way)
 		FMassTransformsSpawnData TransformData;
 		TransformData.Transforms.Reserve(SpawnLocations.Num());
 		for (int32 i = 0; i < SpawnLocations.Num(); ++i)
 		{
 			// Scale down exp orb.
-			FTransform InitialTransform(FQuat::Identity, SpawnLocations[i], FVector::OneVector * 0.1);
+			// Vary sizes/amount depending on experience amount.
+			float Alpha = FMath::Min(DropExpAmounts[i], MAX_EXP_AMT) /  MAX_EXP_AMT;
+			float SizeMultiplier = FMath::Lerp(BASE_EXP_SIZE, MAX_EXP_SIZE, Alpha);
+			FTransform InitialTransform(FQuat::Identity, SpawnLocations[i], FVector::OneVector * SizeMultiplier);
 			TransformData.Transforms.Add(InitialTransform);
 		}
 
@@ -131,13 +140,19 @@ void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<i
 		for (int32 i = 0; i < OutEntities.Num(); ++i)
 		{
 			const FMassEntityHandle& Entity = OutEntities[i];
-
 			if (InEntityManager.IsEntityActive(Entity))
 			{
-			   if (FExpDropFragment* ExpDropFragment = InEntityManager.GetFragmentDataPtr<FExpDropFragment>(Entity))
-			   {
-				  ExpDropFragment->ExperienceAmount = DropExpAmounts[i];
-			   }
+				if (FExpDropFragment* ExpDropFragment = InEntityManager.GetFragmentDataPtr<FExpDropFragment>(Entity))
+				{
+					ExpDropFragment->ExperienceAmount = DropExpAmounts[i];
+				}
+				if (FTransformFragment *TransformFragment = InEntityManager.GetFragmentDataPtr<FTransformFragment>(Entity))
+				{
+					if (FHeightFragment* HeightFragment = InEntityManager.GetFragmentDataPtr<FHeightFragment>(Entity))
+					{
+						HeightFragment->Height = TransformFragment->GetTransform().GetScale3D().Z * 100.f;
+					}
+				}
 			}
 		}
 	});

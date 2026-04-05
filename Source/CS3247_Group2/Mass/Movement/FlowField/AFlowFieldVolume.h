@@ -40,9 +40,9 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category = "FlowField|Debug")
 	bool bShowGroundFlowVectors = true;
-
+	
 	UPROPERTY(EditAnywhere, Category = "FlowField|Debug")
-	bool bShowClimbFlowVectors = true;
+	float DebugDistance = 2000.0f;
 	
 	const uint32 UNREACHABLE = 65535;
 	const int32 NX[4] = {1, -1, 0, 0};
@@ -62,5 +62,5 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FlowField")
 	void UpdateAllFlowFields();
 	
-	void GenerateTypeSpecificField(const FVector& PlayerLocation, TArray<FVector2D>& OutVectors, bool bIsClimbing) const;
+	void GenerateTypeSpecificField(const FVector& PlayerLocation, TArray<FVector2D>& OutVectors) const;
 };

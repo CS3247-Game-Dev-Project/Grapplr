@@ -12,6 +12,7 @@ struct CS3247_GROUP2_API FMovementSpeedFragment : public FMassFragment
 	/** The "clamp" to the movement velocity. */
 	float MaxMovementSpeed = 200.f;
 	
+	/** The speed of interpolation to the desired velocity within the simple movement processor. */
 	float VelocityInterpolationSpeed = 3.f;
 };
 
@@ -42,7 +43,6 @@ struct CS3247_GROUP2_API FHeightFragment : public FMassFragment
 	GENERATED_BODY()
 
 	/** The height of the entity. */
-	UPROPERTY(EditAnywhere)
 	float Height = 176.f;
 };
 
@@ -96,10 +96,8 @@ struct CS3247_GROUP2_API FSimpleGroundMovementTag : public FMassTag
 /**
  * Simple flying movement towards the player.
  * 
- * Each enemy performs a simple line trace forward and moves up if there is a wall in front of it.
- * Otherwise, moves towards the player in a straight line if they have line of sight.
- * 
- * 
+ * Each enemy moves up if there is a wall in front of it.
+ * Otherwise, moves towards the player in a straight line.
  */
 USTRUCT()
 struct CS3247_GROUP2_API FSimpleFlyerMovementTag : public FMassTag
@@ -120,7 +118,6 @@ struct CS3247_GROUP2_API FSimpleFlyerConfigFragment : public FMassFragment
  * Moves towards the player.
  * 
  * If there is a wall in front of it, climbs over it, by moving upwards instead, until it has reached the top.
- * 
  */
 USTRUCT()
 struct CS3247_GROUP2_API FSimpleClimberMovementTag : public FMassTag

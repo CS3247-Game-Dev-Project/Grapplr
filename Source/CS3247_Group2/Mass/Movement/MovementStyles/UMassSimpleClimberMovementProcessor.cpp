@@ -7,12 +7,12 @@
 #include "DrawDebugHelpers.h"
 #include "MassCommonFragments.h"
 #include "MassMovementFragments.h"
+#include "CS3247_Group2/Mass/Constants.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/UEnemyMovementSubsystem.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/USpatialGridUpdateProcessor.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/SignedDistanceField/UMassSDFSubsystem.h"
-#include "CS3247_Group2/Mass/Movement/FlowField/UFlowFieldSubsystem.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
 
 UMassSimpleClimberMovementProcessor::UMassSimpleClimberMovementProcessor() : EntityQuery(*this)
@@ -43,16 +43,15 @@ void UMassSimpleClimberMovementProcessor::Execute(FMassEntityManager& EntityMana
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 	
 	const UEnemyMovementSubsystem* GlobalManager = GetWorld()->GetSubsystem<UEnemyMovementSubsystem>();
-	float GlobalMovementSpeedMult = GlobalManager ? GlobalManager->GlobalMovementSpeedMultiplier : 1.0f;
-	UFlowFieldSubsystem* FlowFieldSubsystem = GetWorld()->GetSubsystem<UFlowFieldSubsystem>();
-	FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
-	float DeltaTime = Context.GetDeltaTimeSeconds();
+	const float GlobalMovementSpeedMult = GlobalManager ? GlobalManager->GlobalMovementSpeedMultiplier : 1.0f;
+	const FVector PlayerLocation = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()->PlayerLocation;
+	const float DeltaTime = Context.GetDeltaTimeSeconds();
 	UMassSDFSubsystem* SDFSubsystem = GetWorld()->GetSubsystem<UMassSDFSubsystem>();
 	
 	constexpr float CLOSE_TO_PLAYER = 500.f;
 	constexpr float SDF_AVOIDANCE_RADIUS = 50.0f;
 	constexpr float CLIMB_DISTANCE = 100.0f;
-	constexpr float CLIMB_MULTIPLIER = 10.0f;
+	constexpr float CLIMB_MULTIPLIER = 2.0f;
 
 	EntityQuery.ForEachEntityChunk(Context, [&](FMassExecutionContext& IterContext)
 	{
@@ -68,14 +67,11 @@ void UMassSimpleClimberMovementProcessor::Execute(FMassEntityManager& EntityMana
 			auto& Target = Targets[i];
 			FVector CurrentLocation = Transforms[i].GetTransform().GetLocation();
 			FVector ToPlayer = (PlayerLocation - CurrentLocation);
-			const FVector HeightOffset = FVector(0.0f, 0.0f, CLIMB_DISTANCE - Heights[i].Height / 2.f + 1.0f);
+			const FVector HeightOffset = FVector(0.0f, 0.0f, SDF_AVOIDANCE_RADIUS - Heights[i].Height / 2.f + 1.0f);
 			float MovementMagnitude = Speeds[i].MaxMovementSpeed * GlobalMovementSpeedMult;
-			bool bIsCurrentlyClimbing = false;
+			bool bIsClimbing = false;
 			
-			// Get our smoothed flow direction from the subsystem
-			// const FVector2D FlowDir2D = FlowFieldSubsystem->GetFlowAtLocation(CurrentLocation, false);
-			// FVector FlowForward = FVector(FlowDir2D.X, FlowDir2D.Y, 0.0f).GetSafeNormal();
-			// Just moving towards the player looks better
+			// Just moving towards the player looks better for climbing than using a flow field.
 			FVector FlowForward = ToPlayer.GetSafeNormal2D();
 			
 			// Use signed distance field to adjust the forward flow, to avoid wall clipping
@@ -85,54 +81,52 @@ void UMassSimpleClimberMovementProcessor::Execute(FMassEntityManager& EntityMana
 				float SDFDistance = SDFSubsystem->GetDistanceAtWorldPosition(CurrentLocation + HeightOffset);
 				if (SDFDistance < CLIMB_DISTANCE)
 				{
-					FVector SDFGradient = SDFSubsystem->GetGradientAtWorldPosition(CurrentLocation + HeightOffset).GetSafeNormal();
-					float FlowToWall = FVector::DotProduct(FlowForward, SDFGradient);
-					// bool bIsVerticalWall = FMath::Abs(SDFGradient.Z) < 0.5f;
-					// if (FlowFieldSubsystem->IsLocationNearEdge(CurrentLocation)) {
-					FVector ClimbFlow = FVector::ZeroVector;
-					if (FlowToWall < 0)
+					// Perform more fine-grained climbing logic with raycasts.
+					FVector TargetPos = CurrentLocation + FVector(0, 0, 1.0f - Heights[i].Height / 2.f);
+					FVector TraceStart = TargetPos;
+					FVector TraceEnd = TargetPos + FlowForward.GetSafeNormal2D() * CLIMB_DISTANCE;
+					FCollisionObjectQueryParams QueryParams;
+					for (const auto ObjectType : WALL_COLLISION) QueryParams.AddObjectTypesToQuery(ObjectType);
+					FHitResult Hit;
+					if (GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, QueryParams))
 					{
-						// Remove gravity tag, climb up, with no repulsion force
-						bIsCurrentlyClimbing = true;
-						ClimbFlow = (FVector::UpVector + SDFGradient * -0.0001f).GetSafeNormal();
-						
-						Target.Center = CurrentLocation + (ClimbFlow * MovementMagnitude * DeltaTime); 
-						Target.Forward = ClimbFlow;
+						// On hit, move up.
+						bIsClimbing = true;
+						FlowForward = FVector::UpVector;
+						MovementMagnitude *= CLIMB_MULTIPLIER;
+					} else
+					{
+						// Some repulsion force (but with correction) if not facing towards wall.
+						FVector SDFGradient = SDFSubsystem->GetGradientAtWorldPosition(CurrentLocation + HeightOffset).GetSafeNormal();
+						FlowForward = FMath::Lerp(FlowForward, SDFGradient.GetSafeNormal(), 0.2f);
 					}
-					
-					float WallCloseness = (SDF_AVOIDANCE_RADIUS - SDFDistance) / SDF_AVOIDANCE_RADIUS;
-					FVector RepulsionForce = SDFGradient * MovementMagnitude * FMath::Square(WallCloseness);
-					FlowForward = FMath::Lerp(ClimbFlow * CLIMB_MULTIPLIER, RepulsionForce.GetSafeNormal(), WallCloseness);
 				}
 			}
 
-			// Handle gravity tag updates
+			// Handle gravity tag updates when climbing state changes.
 			const FMassEntityHandle Entity = IterContext.GetEntity(i);
-			if (!bHasGravity && !bIsCurrentlyClimbing)
+			if (!bHasGravity && !bIsClimbing)
 			{
 				IterContext.Defer().AddTag<FGravityTag>(Entity);
-			} else if (bHasGravity && bIsCurrentlyClimbing)
+			} else if (bHasGravity && bIsClimbing)
 			{
 				IterContext.Defer().RemoveTag<FGravityTag>(Entity);
 			}
 			
 			// Update direction
 			Movements[i].DesiredVelocity = FMath::VInterpTo(Movements[i].DesiredVelocity, FlowForward * MovementMagnitude, DeltaTime, Speeds[i].VelocityInterpolationSpeed);
-		
-			// Target/desire is different if currently climbing, we don't consider sdf repulsion forces.
-			if (bIsCurrentlyClimbing) return;
 			
 			// Point at a spot in the direction the flow field wants us to go
 			Target.DistanceToGoal = ToPlayer.Size();
 			Target.IntentAtGoal = EMassMovementAction::Move;
-			if (FlowForward.IsNearlyZero() || (ToPlayer.Size() <= CLOSE_TO_PLAYER && FMath::Abs(ToPlayer.Z) < 100.0f))
+			if (FlowForward.IsNearlyZero() || (ToPlayer.Size() <= CLOSE_TO_PLAYER && FMath::Abs(ToPlayer.Z) < 10.0f))
 			{
 				Target.Forward = ToPlayer.GetSafeNormal2D();
 				Target.Center = CurrentLocation + (ToPlayer.GetSafeNormal2D() * MovementMagnitude * DeltaTime);
 			} else
 			{
-				Target.Center = CurrentLocation + (FlowForward * MovementMagnitude * DeltaTime); 
 				Target.Forward = FlowForward;
+				Target.Center = CurrentLocation + (FlowForward * MovementMagnitude * DeltaTime); 
 			}
 		}
 	});

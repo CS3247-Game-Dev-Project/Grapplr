@@ -57,9 +57,10 @@ void UMassGravityProcessor::Execute(FMassEntityManager& EntityManager, FMassExec
 			FVector TargetPos = CurrentLocation + FVector(0, 0, -HalfHeight);
 			FVector TraceStart = TargetPos + FVector(0, 0, Heights[i].Height); 
 			FVector TraceEnd = TargetPos + FVector(0, 0, Gravities[i].AccumulatedVelocity * DeltaTime);
-			FCollisionQueryParams Params;
+			FCollisionObjectQueryParams QueryParams;
+			for (const auto ObjectType : WALL_COLLISION) QueryParams.AddObjectTypesToQuery(ObjectType);
 			FHitResult Hit;
-			if (GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, ECC_WorldStatic, Params))
+			if (GetWorld()->LineTraceSingleByObjectType(Hit, TraceStart, TraceEnd, QueryParams))
 			{
 				// Snap to the ground if hit.
 				float GroundZ = Hit.ImpactPoint.Z + HalfHeight;

@@ -1,7 +1,14 @@
 ﻿#include "AFlowFieldVolume.h"
 #include "DrawDebugHelpers.h"
 #include "UFlowFieldSubsystem.h"
+#include "CS3247_Group2/Mass/Constants.h"
+#include "Kismet/GameplayStatics.h"
 #include "CS3247_Group2/Mass/Player/UPlayerDataSubsystem.h"
+
+#if WITH_EDITOR
+#include "Editor.h"
+#include "LevelEditorViewport.h"
+#endif
 
 AFlowFieldVolume::AFlowFieldVolume()
 {
@@ -84,7 +91,9 @@ void AFlowFieldVolume::BakeFlowField() const
             End.Z = BottomZ;
 
             FHitResult Hit;
-            if (GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_WorldStatic, Params))
+            FCollisionObjectQueryParams QueryParams;
+            for (const auto ObjectType : WALL_COLLISION) QueryParams.AddObjectTypesToQuery(ObjectType);
+            if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, QueryParams))
             { 
                 TargetAsset->BakedHeights[Index] = Hit.Location.Z;
             } else {
@@ -107,6 +116,40 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
 
     if (!bShowDebug || !TargetAsset || TargetAsset->BakedHeights.Num() == 0) return;
     
+    FVector ViewLocation;
+    bool bFoundLocation = false;
+    if (UWorld* World = GetWorld())
+    {
+        // Try to get the Camera Location in the Editor (Viewport)
+#if WITH_EDITOR
+        if (GIsEditor && !World->IsGameWorld())
+        {
+            // This looks at the active editor viewport camera
+            FEditorViewportClient* ViewportClient = (FEditorViewportClient*)GEditor->GetActiveViewport()->GetClient();
+            if (ViewportClient)
+            {
+                ViewLocation = ViewportClient->GetViewLocation();
+                bFoundLocation = true;
+            }
+        }
+#endif
+
+        // If not in editor or viewport check failed, try the Player Controller (Runtime)
+        if (!bFoundLocation)
+        {
+            if (APlayerController* PC = World->GetFirstPlayerController())
+            {
+                FRotator ViewRotation;
+                PC->GetPlayerViewPoint(ViewLocation, ViewRotation);
+                bFoundLocation = true;
+            }
+        }
+    }
+    
+    // If we still don't have a location, we can't do a distance check
+    if (!bFoundLocation) return;
+    const float MaxDebugDistSq = FMath::Square(DebugDistance);
+    
     const int32 GridX = TargetAsset->GridDimensions.X;
     const float HalfCell = CellSize * 0.5f;
 
@@ -117,6 +160,8 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
 
         FVector Center = TargetAsset->GridWorldOrigin + FVector(x * CellSize + HalfCell, y * CellSize + HalfCell, 0.0f);
         Center.Z = TargetAsset->BakedHeights[i];
+        
+        if (FVector::DistSquared(Center, ViewLocation) > MaxDebugDistSq) continue;
         
         MyLineBatcher->DrawBox(
             Center, 
@@ -135,17 +180,7 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
             {
                 FVector Dir(Dir2D.X, Dir2D.Y, 0.0f);
                 FVector ArrowEnd = Center + (Dir * HalfCell * 0.8f);
-                MyLineBatcher->DrawLine(Center, ArrowEnd, FColor::Red, 0, 5.0f);
-            }
-        }
-        if (bShowClimbFlowVectors && TargetAsset->ClimbFlowVectors.IsValidIndex(i))
-        {
-            FVector2D Dir2D = TargetAsset->ClimbFlowVectors[i];
-            if (!Dir2D.IsNearlyZero())
-            {
-                FVector Dir(Dir2D.X, Dir2D.Y, 0.0f);
-                FVector ArrowEnd = Center + (Dir * HalfCell * 0.8f);
-                MyLineBatcher->DrawLine(Center, ArrowEnd, FColor::Purple, 0, 5.0f);
+                MyLineBatcher->DrawDirectionalArrow(Center, ArrowEnd, 100.0f, FColor::Red, -1, 0, 5.0f);
             }
         }
     }
@@ -163,13 +198,12 @@ void AFlowFieldVolume::UpdateAllFlowFields()
     
     if (MyLineBatcher) MyLineBatcher->Flush();
     
-    GenerateTypeSpecificField(PlayerLocation, TargetAsset->GroundFlowVectors, false);
-    GenerateTypeSpecificField(PlayerLocation, TargetAsset->ClimbFlowVectors, true);
+    GenerateTypeSpecificField(PlayerLocation, TargetAsset->GroundFlowVectors);
     
     DrawFlowFieldDebug();
 }
 
-void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, TArray<FVector2D>& OutVectors, bool bIsClimbing) const
+void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, TArray<FVector2D>& OutVectors) const
 {
     if (!TargetAsset) return;
     
@@ -214,7 +248,7 @@ void AFlowFieldVolume::GenerateTypeSpecificField(const FVector& PlayerLocation, 
             if (NeighborX < 0 || NeighborX >= GridX || NeighborY < 0 || NeighborY >= GridY) continue;
             
             float HeightDiff = TargetAsset->BakedHeights[CurrIdx] - TargetAsset->BakedHeights[NeighborIdx];
-            if (bIsClimbing || HeightDiff <= 0)
+            if (HeightDiff <= 0)
             {
                 uint32 NewCost = IntegrationField[CurrIdx] + 1 + FMath::Max(HeightDiff / CellSize, 0);
                 if (NewCost < IntegrationField[NeighborIdx])
