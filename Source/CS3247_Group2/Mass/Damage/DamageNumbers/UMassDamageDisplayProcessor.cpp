@@ -4,6 +4,7 @@
 #include "MassCommonTypes.h"
 #include "MassDebugger.h"
 #include "MassExecutionContext.h"
+#include "UDamageNumberSubsystem.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
 
 UMassDamageDisplayProcessor::UMassDamageDisplayProcessor() : EntityQuery(*this)
@@ -55,7 +56,11 @@ void UMassDamageDisplayProcessor::Execute(FMassEntityManager& EntityManager, FMa
 	// Send all collected data to the Manager in one go
 	if (Locations.Num() > 0)
 	{
-		// TODO: fix crash
-		// GetWorld()->GetSubsystem<UDamageManagerSubsystem>()->DamageManager->EmitDamageNumbers(Locations, Amounts, Crits);
+		AsyncTask(ENamedThreads::GameThread, [this, Locations, Amounts, Crits]()
+		{
+			if (auto* Subsystem = GetWorld()->GetSubsystem<UDamageNumberSubsystem>()) {
+				Subsystem->EmitDamageNumbers(Locations, Amounts, Crits);
+			}
+		});
 	}
 }

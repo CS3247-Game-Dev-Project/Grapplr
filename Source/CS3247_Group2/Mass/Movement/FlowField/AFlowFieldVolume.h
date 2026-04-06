@@ -30,6 +30,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "FlowField")
 	float CellSize = 100.0f;
 	
+	UPROPERTY(EditAnywhere, Category = "FlowField")
+    TArray<AActor*> ActorsToIgnore;
+	
 	FVector LastPlayerLocation;
 	
 	UPROPERTY(EditAnywhere, Category = "FlowField")
