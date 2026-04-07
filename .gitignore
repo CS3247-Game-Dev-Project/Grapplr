@@ -78,3 +78,5 @@ Platforms/HoloLens/Config/HoloLensEngine.ini
 
 # User-specific Rider/ReSharper settings
 *.sln.DotSettings.user
+
+Content/RogueCharacter/Demo/ThirdPerson/Blueprints/BP_ThirdPersonCharacterBackup.uasset
