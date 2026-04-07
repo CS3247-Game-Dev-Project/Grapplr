@@ -76,8 +76,24 @@ void AFlowFieldVolume::BakeFlowField() const
     float BottomZ = Origin.Z - Extent.Z;
     TargetAsset->GroundHeight = TopZ;
 
+    // Ignore certain actors
     FCollisionQueryParams Params;
-    Params.AddIgnoredActor(this);
+    Params.AddIgnoredActor(this); 
+    for (AActor* Actor : ActorsToIgnore)
+    {
+        if (Actor)
+        {
+            Params.AddIgnoredActor(Actor);
+        }
+    }
+    
+    // Use a box extent that covers the cell.
+    // Allow for some amount of overlap.
+    FVector BoxHalfExtent = FVector((CellSize * 0.45f), (CellSize * 0.45f), 1.0f);
+    FQuat Rotation = FQuat::Identity;
+    
+    FCollisionObjectQueryParams QueryParams;
+    for (const auto ObjectType : WALL_COLLISION) QueryParams.AddObjectTypesToQuery(ObjectType);
 
     for (int32 y = 0; y < GridY; ++y) {
         for (int32 x = 0; x < GridX; ++x) {
@@ -89,16 +105,16 @@ void AFlowFieldVolume::BakeFlowField() const
             Start.Z = TopZ;
             FVector End = Start;
             End.Z = BottomZ;
-
+            
+            // SweepSingle checks the entire volume of the box as it moves from Start to End
             FHitResult Hit;
-            FCollisionObjectQueryParams QueryParams;
-            for (const auto ObjectType : WALL_COLLISION) QueryParams.AddObjectTypesToQuery(ObjectType);
-            if (GetWorld()->LineTraceSingleByObjectType(Hit, Start, End, QueryParams))
-            { 
-                TargetAsset->BakedHeights[Index] = Hit.Location.Z;
+            bool bHit = GetWorld()->SweepSingleByObjectType(Hit, Start, End, Rotation, QueryParams, FCollisionShape::MakeBox(BoxHalfExtent), Params);
+            if (bHit) { 
+                TargetAsset->BakedHeights[Index] = Hit.ImpactPoint.Z;
             } else {
                 TargetAsset->BakedHeights[Index] = BottomZ;
             }
+            
             TargetAsset->GroundHeight = FMath::Min(TargetAsset->GroundHeight, TargetAsset->BakedHeights[Index]);
         }
     }
@@ -161,7 +177,7 @@ void AFlowFieldVolume::DrawFlowFieldDebug() const
         FVector Center = TargetAsset->GridWorldOrigin + FVector(x * CellSize + HalfCell, y * CellSize + HalfCell, 0.0f);
         Center.Z = TargetAsset->BakedHeights[i];
         
-        if (FVector::DistSquared(Center, ViewLocation) > MaxDebugDistSq) continue;
+        if ((Center - ViewLocation).SizeSquared2D() > MaxDebugDistSq) continue;
         
         MyLineBatcher->DrawBox(
             Center, 

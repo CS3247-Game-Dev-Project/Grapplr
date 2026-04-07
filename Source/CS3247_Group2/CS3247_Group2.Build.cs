@@ -31,9 +31,8 @@ public class CS3247_Group2 : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			
-			// Experimental
+			// For navmesh based spawning (not used?)
 			"NavigationSystem",
-			"Niagara",
 			
 			// For baking the signed distance fields
 			"GeometryScriptingCore",
