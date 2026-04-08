@@ -40,7 +40,7 @@ FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origi
 	// Fallback: Search for a random reachable point, with retry (no min radius constraint if fails too many times) 
 	if (FNavLocation RandomNavLocation; NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: random reachable point in navmesh (with no min radius if too many retries)"));
+		UE_LOG(LogTemp, Log, TEXT("Spawning entity via fallback: random reachable point in navmesh (with no min radius if too many retries)"));
 		for (int retry = 0; retry < 10; retry++)
 		{
 			if ((RandomNavLocation.Location - Origin).Size2D() < MinRadius) break;
@@ -50,7 +50,8 @@ FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origi
 	}
 
 	// Fallback: If no nav point found, offset slightly so they aren't stacked
-	UE_LOG(LogTemp, Warning, TEXT("Spawning entity via fallback: fall from random point within radius square bounds "));
+	// FIXME: bug in the enemy spawning outside the wall, enemy is unable to reach the player, vice versa.
+	UE_LOG(LogTemp, Log, TEXT("Spawning entity via fallback: fall from random point within radius square bounds "));
 	FVector FinalLocation = Origin;
 	for (int retry = 0; retry < 10; retry++)
 	{

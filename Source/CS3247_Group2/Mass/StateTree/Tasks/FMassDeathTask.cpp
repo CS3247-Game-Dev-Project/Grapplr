@@ -2,7 +2,6 @@
 #include "MassStateTreeExecutionContext.h"
 #include "StateTreeLinker.h"
 #include "CS3247_Group2/Mass/Animations/UMassAnimationComponent.h"
-#include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/StateTree/UMassEnemyStateTreeProcessor.h"
 
 bool FMassDeathTask::Link(FStateTreeLinker& Linker)
@@ -15,10 +14,6 @@ EStateTreeRunStatus FMassDeathTask::EnterState(FStateTreeExecutionContext& Conte
 {
 	if (!Context.AreContextDataViewsValid()) return EStateTreeRunStatus::Failed;
 	
-	const FMassStateTreeExecutionContext& MassContext = static_cast<FMassStateTreeExecutionContext&>(Context);
-	const FMassEntityManager& EntityManager = MassContext.GetEntityManager();
-	EntityManager.Defer().AddTag<FDeadTag>(MassContext.GetEntity());
-
 	const FMassActorFragment& ActorFragment = Context.GetExternalData(ActorHandle);
 	if (const AActor* Actor = ActorFragment.Get())
 	{
