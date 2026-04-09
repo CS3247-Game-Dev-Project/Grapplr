@@ -75,6 +75,7 @@ void ASDFBakeActor::ExtractMeshesFromActor(AActor* RootActor, TArray<UStaticMesh
 }
 void ASDFBakeActor::BakeSignedDistanceField(float InVoxelSize, FBox InBounds) const
 {
+#if WITH_EDITOR
     using namespace UE::Geometry;
     
     if (!TargetAsset) return;
@@ -205,6 +206,9 @@ void ASDFBakeActor::BakeSignedDistanceField(float InVoxelSize, FBox InBounds) co
     });
     
     TargetAsset->Modify();
+#else
+	UE_LOG(LogTemp, Warning, TEXT("SDF Baking is not available in cooked builds."));
+#endif
 }
 
 void ASDFBakeActor::VisualizeSDFSlice() const

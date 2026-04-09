@@ -44,7 +44,11 @@ public class CS3247_Group2 : ModuleRules
 			"MeshDescription"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "LevelEditor" });
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "LevelEditor" });
+		}
+
 		
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
