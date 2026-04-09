@@ -2,6 +2,7 @@
 
 #include "MassCommonTypes.h"
 #include "MassExecutionContext.h"
+#include "CS3247_Group2/Mass/Constants.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
 #include "CS3247_Group2/Mass/StateTree/UMassEnemyStateTreeProcessor.h"
 
@@ -37,9 +38,15 @@ void UMassEnemyDamageProcessor::Execute(FMassEntityManager& EntityManager, FMass
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
 			HealthList[i].CurrentHealth -= DamageList[i].PendingDamage;
+			if (DamageList[i].PendingDamage > 0.0f && GBDebugHitEnemyHealth)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("health: %f / %f"), HealthList[i].CurrentHealth, HealthList[i].MaxHealth);
+			}
+			
 			DamageList[i].PendingDamage = 0.0f;
 			if (HealthList[i].CurrentHealth <= 0.0f)
 			{
+				Context.Defer().AddTag<FDeadTag>(IterContext.GetEntity(i));
 				SignalSubsystem->SignalEntityDeferred(IterContext, MassEnemyStateTree::Signals::EnemyDeath, IterContext.GetEntity(i));
 			}
 		}

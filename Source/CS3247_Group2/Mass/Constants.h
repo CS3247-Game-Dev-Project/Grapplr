@@ -8,3 +8,6 @@ constexpr float GRAVITY = -980.f;
 constexpr int MAX_ENEMY_COUNT = 10000;
 
 constexpr ECollisionChannel WALL_COLLISION[] = {ECC_WorldStatic};
+
+/** Debug params */
+constexpr bool GBDebugHitEnemyHealth = false;
