@@ -49,7 +49,7 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 	UFlowFieldSubsystem* FlowFieldSubsystem = GetWorld()->GetSubsystem<UFlowFieldSubsystem>();
 	UMassSDFSubsystem* SDFSubsystem = GetWorld()->GetSubsystem<UMassSDFSubsystem>();
 	
-	const float MIN_HEIGHT_ABOVE = 3000.f;
+	const float MIN_HEIGHT_ABOVE = 800.f;
 	const float CLOSE_TO_PLAYER = 2000.f;
 	const float VERY_CLOSE_TO_PLAYER = 500.f;
 	const float HEIGHT_DRIFT_MAGNITUDE = 2.0f;
@@ -87,7 +87,7 @@ void UMassSimpleFlyerMovementProcessor::Execute(FMassEntityManager& EntityManage
 			float DesiredZ = MaxTerrainHeight + MIN_HEIGHT_ABOVE + VerticalBob;
 			if (ToPlayer.Size2D() <= CLOSE_TO_PLAYER)
 			{
-				float AdditionalHeight = FMath::Max(0.f , FMath::Lerp(0.f, MIN_HEIGHT_ABOVE, (ToPlayer.Size2D() - VERY_CLOSE_TO_PLAYER) / CLOSE_TO_PLAYER));
+				float AdditionalHeight = FMath::Max(0.f , FMath::Lerp(0.f, MIN_HEIGHT_ABOVE, FMath::Square((ToPlayer.Size2D() - VERY_CLOSE_TO_PLAYER) / CLOSE_TO_PLAYER)));
 				DesiredZ = FMath::Max(PlayerLocation.Z, MaxTerrainHeight) + AdditionalHeight;
 			}
 			

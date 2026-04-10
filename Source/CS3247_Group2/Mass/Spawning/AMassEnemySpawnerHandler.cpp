@@ -9,7 +9,6 @@
 #include "MassActorSubsystem.h"
 #include "MassMovementFragments.h"
 #include "MassNavigationFragments.h"
-#include "NavigationSystem.h"
 #include "UEnemyCountSubsystem.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
 #include "CS3247_Group2/Mass/Damage/FHealthFragments.h"
@@ -17,56 +16,58 @@
 #include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 #include "CS3247_Group2/Mass/Movement/Avoidance/SignedDistanceField/UMassSDFSubsystem.h"
 
-FVector GetValidLocation(const UNavigationSystemV1* NavSys, const FVector& Origin, const float& MinRadius, const float& MaxRadius)
+FVector GetValidLocation(const UBoxComponent* SpawnBox, const FVector& Origin, const float MinRadius, const float MaxRadius)
 {
-	// Get a random direction (2D)
-	FVector RandomDir = FMath::VRand();
-	RandomDir.Z = 0.0f;
-	RandomDir.Normalize();
+    if (!SpawnBox) return Origin;
 
-	// Get a random distance between Min and Max.
-	// Using Square Root of a random float ensures uniform distribution in a circle.
-	const float RandomDist = FMath::Lerp(MinRadius, MaxRadius, FMath::Sqrt(FMath::FRand()));
+    // Get Box Dimensions
+    const FVector BoxOrigin = SpawnBox->GetComponentLocation();
+    const FVector BoxExtent = SpawnBox->GetScaledBoxExtent();
 
-	const FVector TargetPoint = Origin + (RandomDir * RandomDist);
+    const float BoxMinX = BoxOrigin.X - BoxExtent.X;
+    const float BoxMaxX = BoxOrigin.X + BoxExtent.X;
+    const float BoxMinY = BoxOrigin.Y - BoxExtent.Y;
+    const float BoxMaxY = BoxOrigin.Y + BoxExtent.Y;
 
-	// Project that point onto the NavMesh.
-	// NavMesh will look up/down to find a floor
-	if (FNavLocation ProjectedLocation; NavSys->ProjectPointToNavigation(TargetPoint, ProjectedLocation, FVector(100.f, 100.f, 100000.f)))
-	{
-		return ProjectedLocation.Location;
-	}
+    // Intersect Box with the Square bounding the MaxRadius.
+    // We use FMath::Clamp to ensure SearchMin is never greater than SearchMax,
+    // which keeps the point inside the box even if the radius is elsewhere.
+    const float SearchMinX = FMath::Clamp(Origin.X - MaxRadius, BoxMinX, BoxMaxX);
+    const float SearchMaxX = FMath::Clamp(Origin.X + MaxRadius, BoxMinX, BoxMaxX);
+    const float SearchMinY = FMath::Clamp(Origin.Y - MaxRadius, BoxMinY, BoxMaxY);
+    const float SearchMaxY = FMath::Clamp(Origin.Y + MaxRadius, BoxMinY, BoxMaxY);
 
-	// Fallback: Search for a random reachable point, with retry (no min radius constraint if fails too many times) 
-	if (FNavLocation RandomNavLocation; NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation))
-	{
-		UE_LOG(LogTemp, Log, TEXT("Spawning entity via fallback: random reachable point in navmesh (with no min radius if too many retries)"));
-		for (int retry = 0; retry < 10; retry++)
-		{
-			if ((RandomNavLocation.Location - Origin).Size2D() < MinRadius) break;
-			NavSys->GetRandomPointInNavigableRadius(Origin, MaxRadius, RandomNavLocation);
-		}
-		return RandomNavLocation.Location;
-	}
+    // Pick a random point in this "best-effort" intersection
+    FVector FinalLocation(
+        FMath::RandRange(SearchMinX, SearchMaxX),
+        FMath::RandRange(SearchMinY, SearchMaxY),
+        BoxOrigin.Z + BoxExtent.Z // Directly set to the TOP of the box
+    );
 
-	// Fallback: If no nav point found, offset slightly so they aren't stacked
-	// FIXME: bug in the enemy spawning outside the wall, enemy is unable to reach the player, vice versa.
-	UE_LOG(LogTemp, Log, TEXT("Spawning entity via fallback: fall from random point within radius square bounds "));
-	FVector FinalLocation = Origin;
-	for (int retry = 0; retry < 10; retry++)
-	{
-		FinalLocation= Origin + FVector(FMath::RandRange(-MaxRadius, MaxRadius),
-											  FMath::RandRange(-MaxRadius, MaxRadius), Origin.Z + 3000.f);
-		if ((FinalLocation - Origin).SizeSquared2D() > MinRadius * MinRadius)
-		{
-			return FinalLocation;
-		}
-	}
-	
-	// Just return some location if still failed.
-	return FinalLocation;
+    // Enforce Radial Constraints
+    FVector Dir2D = FinalLocation - Origin;
+    Dir2D.Z = 0.0f;
+    float Dist2D = Dir2D.Size();
+
+    // If point is too close (inside Min) or outside circular Max
+    if (Dist2D < MinRadius || Dist2D > MaxRadius)
+    {
+        const float ClampedDist = FMath::Clamp(Dist2D, MinRadius, MaxRadius);
+        
+        // Handle edge case where Origin is exactly on the random point
+        const FVector SafeDir = (Dist2D < 0.001f) ? FVector::ForwardVector : Dir2D / Dist2D;
+        
+        FinalLocation.X = Origin.X + (SafeDir.X * ClampedDist);
+        FinalLocation.Y = Origin.Y + (SafeDir.Y * ClampedDist);
+
+        // 5. FINAL MANDATORY CLAMP: 
+        // Ensures the radial push/pull didn't violate the Box boundaries.
+        FinalLocation.X = FMath::Clamp(FinalLocation.X, BoxMinX, BoxMaxX);
+        FinalLocation.Y = FMath::Clamp(FinalLocation.Y, BoxMinY, BoxMaxY);
+    }
+
+    return FinalLocation;
 }
-
 void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyWaveStats EnemyWaveStats, float MinSpawnRadius, float MaxSpawnRadius, int32 NumToSpawn)
 {
 	const UWorld* World = GetWorld();
@@ -108,13 +109,10 @@ void AMassEnemySpawnerHandler::RequestEntitySpawn(FVector SpawnLocation, FEnemyW
 	// Use navmesh to get valid spawning locations around 
 	TArray<FVector> PreCalculatedLocations;
 	PreCalculatedLocations.Reserve(NumToSpawn);
-	if (const UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld()))
+	for (int32 i = 0; i < NumToSpawn; ++i)
 	{
-		for (int32 i = 0; i < NumToSpawn; ++i)
-		{
-			const float ZOffset = EnemyWaveStats.BaseMeshHeight * EnemyWaveStats.VisualScale * 0.5;
-			PreCalculatedLocations.Add(GetValidLocation(NavSys, SpawnLocation, MinSpawnRadius, MaxSpawnRadius) + FVector(0, 0, ZOffset));
-		}
+		const float ZOffset = EnemyWaveStats.BaseMeshHeight * EnemyWaveStats.VisualScale * 0.5;
+		PreCalculatedLocations.Add(GetValidLocation(ValidSpawnBox, SpawnLocation, MinSpawnRadius, MaxSpawnRadius) + FVector(0, 0, ZOffset));
 	}
 	
 	// Assume that spawning is successful early to prevent more enemies than our limit to be spawned.

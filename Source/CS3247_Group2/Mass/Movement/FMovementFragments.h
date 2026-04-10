@@ -111,7 +111,7 @@ struct CS3247_GROUP2_API FSimpleFlyerConfigFragment : public FMassFragment
 {
 	GENERATED_BODY()
 	float FlightHeightFrequency = 0.1f;
-	float FlightHeightAmplitude = 1000.0f;
+	float FlightHeightAmplitude = 500.0f;
 };
 
 /**
