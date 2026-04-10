@@ -4,7 +4,7 @@
 #include "UPlayerDataSubsystem.generated.h"
 
 // Listen to these broadcast events in blueprints.
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyKill, int32, TickKillCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyKill, int32, TickKillCount, const TArray<FVector>&, EnemyDeathLocations);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnExpCollect, int32, TickExpAmount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerDamage, float, TickDamageAmount);
 
@@ -46,12 +46,12 @@ public:
 	/** Avoid using the player ptr in mass processors as it is unsafe. */
 	TWeakObjectPtr<AActor> PlayerPtr;
 	
-	void AddEnemyKills(int32 Amount)
+	void AddEnemyKills(int32 Amount, const TArray<FVector>& EnemyDeathLocations)
 	{
 		TotalKills += Amount;
 		if (!IsValid(this) || !GetWorld() || GetWorld()->IsBeingCleanedUp()) return;
 		if (!OnEnemyKill.IsBound()) return;
-		OnEnemyKill.Broadcast(Amount);
+		OnEnemyKill.Broadcast(Amount, EnemyDeathLocations);
 	}
 	
 	void AddExpCollected(int32 Amount)

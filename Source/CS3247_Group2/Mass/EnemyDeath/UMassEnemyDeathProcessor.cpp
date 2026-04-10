@@ -37,7 +37,7 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 {
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR EXECUTING TICK: %s"), *GetName());
 
-	TArray<FVector> ExpSpawnLocations;
+	TArray<FVector> EnemyDeathLocations;
 	TArray<int> DropExpAmounts;
 	int EnemyKillCount = 0;
 	TSharedPtr<FMassCommandBuffer> CommandBuffer = Context.GetSharedDeferredCommandBuffer();
@@ -49,7 +49,7 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 		
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
-			ExpSpawnLocations.Add( TransformList[i].GetTransform().GetLocation());
+			EnemyDeathLocations.Add( TransformList[i].GetTransform().GetLocation());
 			DropExpAmounts.Add(DropStats[i].ExperienceAmount);
 			EnemyKillCount++;
 			
@@ -60,10 +60,10 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 	
 	if (EnemyKillCount > 0)
 	{
-		AsyncTask(ENamedThreads::GameThread, [this, EnemyKillCount]()
+		AsyncTask(ENamedThreads::GameThread, [this, EnemyKillCount, EnemyDeathLocations]()
 		{
 			if (auto* Subsystem = GetWorld()->GetSubsystem<UPlayerDataSubsystem>()) {
-				Subsystem->AddEnemyKills(EnemyKillCount);
+				Subsystem->AddEnemyKills(EnemyKillCount, EnemyDeathLocations);
 			}
 			if (auto * Subsystem = GetWorld()->GetSubsystem<UEnemyCountSubsystem>())
 			{
@@ -72,7 +72,7 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 		});
 	}
 	
-	SpawnExp(ExpSpawnLocations, DropExpAmounts, CommandBuffer);
+	SpawnExp(EnemyDeathLocations, DropExpAmounts, CommandBuffer);
 }
 
 void UMassEnemyDeathProcessor::SpawnExp(TArray<FVector> SpawnLocations, TArray<int> DropExpAmounts, const TSharedPtr<FMassCommandBuffer>& CommandBuffer) const
