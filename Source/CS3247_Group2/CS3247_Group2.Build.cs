@@ -44,7 +44,15 @@ public class CS3247_Group2 : ModuleRules
 			"MeshDescription"
 		});
 
-		if (Target.bBuildEditor)
+        PrivateDependencyModuleNames.AddRange(new string[]
+		{
+            "MoviePlayer",
+            "Slate",
+            "SlateCore",
+            "UMG"
+		});
+
+        if (Target.bBuildEditor)
 		{
 			PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "LevelEditor" });
 		}
