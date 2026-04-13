@@ -59,8 +59,7 @@ FVector GetValidLocation(const UBoxComponent* SpawnBox, const FVector& Origin, c
         
         FinalLocation.X = Origin.X + (SafeDir.X * ClampedDist);
         FinalLocation.Y = Origin.Y + (SafeDir.Y * ClampedDist);
-
-        // 5. FINAL MANDATORY CLAMP: 
+    	
         // Ensures the radial push/pull didn't violate the Box boundaries.
         FinalLocation.X = FMath::Clamp(FinalLocation.X, BoxMinX, BoxMaxX);
         FinalLocation.Y = FMath::Clamp(FinalLocation.Y, BoxMinY, BoxMaxY);
