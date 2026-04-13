@@ -18,7 +18,7 @@ protected:
 	FMassEntityQuery EntityQuery;
 
 private:
-	const float MaxDetectionRadius = 250.f; 
-	const float BaseMaxSpeed = 800.f;
-	const float PickupRadius = 20.f;
+	const float MaxDetectionRadius = 1000.f; 
+	const float BaseMaxSpeed = 1200.f;
+	const float PickupRadius = 30.f;
 };
