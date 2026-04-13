@@ -46,7 +46,7 @@ void UMassGravityProcessor::Execute(FMassEntityManager& EntityManager, FMassExec
 			const float HalfHeight = Heights[i].Height / 2.f;
 	
 			// Skip the gravity computation if already on the ground
-			if ((FlowFieldSubsystem->GetGroundHeight() + HalfHeight + 0.1f >= CurrentLocation.Z) && (Gravities[i].AccumulatedVelocity == 0))
+			if ((FlowFieldSubsystem->GetGroundHeight() + HalfHeight + 0.1f >= CurrentLocation.Z) && (Gravities[i].AccumulatedVelocity == 0.0f))
 			{
 				float GroundZ = FlowFieldSubsystem->GetGroundHeight() + HalfHeight;
 				Transforms[i].GetMutableTransform().SetTranslation(FVector(CurrentLocation.X, CurrentLocation.Y, GroundZ));
