@@ -97,6 +97,17 @@ void ASDFBakeActor::BakeSignedDistanceField(float InVoxelSize, FBox InBounds) co
     {
         AActor* CurrentActor = *It;
 
+    	bool bIsIgnoredClass = false;
+    	for (UClass* BadClass : ClassesToIgnore)
+    	{
+    		if (CurrentActor->IsA(BadClass)) 
+    		{
+    			bIsIgnoredClass = true;
+    			break;
+    		}
+    	}
+    	if (bIsIgnoredClass) continue;
+    	
         // Avoid Double-Counting. 
         // Only start extraction from "Top Level" actors. 
         // If an actor has a parent, it will be reached via recursion from the root.

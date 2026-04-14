@@ -28,6 +28,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Mass|Enemy");
 	int32 TotalKills = 0;
 	
+	UPROPERTY(BlueprintReadWrite, Category = "Mass|Enemy");
+	int32 WavesSurvived = 0;
+	
 	UPROPERTY(BlueprintReadOnly, Category = "Mass|Exp");
 	int32 TotalExperienceCollected = 0;
 	

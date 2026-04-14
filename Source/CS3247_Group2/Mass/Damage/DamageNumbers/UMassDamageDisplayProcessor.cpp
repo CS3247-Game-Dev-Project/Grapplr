@@ -6,6 +6,7 @@
 #include "MassExecutionContext.h"
 #include "UDamageNumberSubsystem.h"
 #include "CS3247_Group2/Mass/Damage/FDamageFragments.h"
+#include "CS3247_Group2/Mass/Movement/FMovementFragments.h"
 
 UMassDamageDisplayProcessor::UMassDamageDisplayProcessor() : EntityQuery(*this)
 {
@@ -20,6 +21,7 @@ void UMassDamageDisplayProcessor::ConfigureQueries(const TSharedRef<FMassEntityM
 {
 	EntityQuery.AddRequirement<FDamageDisplayFragment>(EMassFragmentAccess::ReadWrite);
 	EntityQuery.AddRequirement<FTransformFragment>(EMassFragmentAccess::ReadOnly);
+	EntityQuery.AddRequirement<FHeightFragment>(EMassFragmentAccess::ReadOnly);
 
 	UE_LOG(LogTemp, Log, TEXT("PROCESSOR CONFIGURED: %s"), *GetName());
 }
@@ -37,12 +39,14 @@ void UMassDamageDisplayProcessor::Execute(FMassEntityManager& EntityManager, FMa
 	{
 		const auto DamageDisplayList = IterContext.GetMutableFragmentView<FDamageDisplayFragment>();
 		const auto TransformList = IterContext.GetFragmentView<FTransformFragment>();
+		const auto HeightList = IterContext.GetFragmentView<FHeightFragment>();
 
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
+			
 			if (DamageDisplayList[i].bHasPendingDisplay)
 			{
-				Locations.Add(TransformList[i].GetTransform().GetLocation());
+				Locations.Add(TransformList[i].GetTransform().GetLocation() + HeightList[i].Height / 4.0f);
 				Amounts.Add(DamageDisplayList[i].PendingDamage);
 				Crits.Add(DamageDisplayList[i].bIsCritical);
 

@@ -21,6 +21,9 @@ public:
 	
 	UFUNCTION(CallInEditor, Category = "SDF")
 	void TriggerBake() const;
+	
+	UPROPERTY(EditAnywhere, Category = "SDF")
+	TArray<UClass*> ClassesToIgnore;
 
 	UPROPERTY(EditAnywhere, Category = "SDF|Debug")
 	float SliceVisualizationHeight = 100.0f;
