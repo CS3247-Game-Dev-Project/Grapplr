@@ -44,16 +44,15 @@ void UMassEnemyDeathProcessor::Execute(FMassEntityManager& EntityManager, FMassE
 	
 	EntityQuery.ForEachEntityChunk(Context, [&](const FMassExecutionContext& IterContext)
 	{
-		const auto TransformList = IterContext.GetFragmentView<FTransformFragment>();
+		const auto Transforms = IterContext.GetFragmentView<FTransformFragment>();
 		const auto DropStats = IterContext.GetFragmentView<FDropStatsFragment>();
 		
 		for (int32 i = 0; i < IterContext.GetNumEntities(); ++i)
 		{
-			EnemyDeathLocations.Add( TransformList[i].GetTransform().GetLocation());
+			EnemyDeathLocations.Add(Transforms[i].GetTransform().GetLocation());
 			DropExpAmounts.Add(DropStats[i].ExperienceAmount);
 			EnemyKillCount++;
 			
-			// TODO: add death animation?.
 			IterContext.Defer().DestroyEntity(IterContext.GetEntity(i));
 		}
 	});
